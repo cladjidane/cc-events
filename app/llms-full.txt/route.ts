@@ -347,6 +347,60 @@ POST /api/v1/events/{id}/registrations
 ## Spécification OpenAPI
 
 Pour la spécification machine-readable complète : \`GET /api/v1/openapi\`
+
+---
+
+## Intégration Claude Desktop (MCP)
+
+EventLite dispose d'un serveur MCP (Model Context Protocol) qui permet à Claude Desktop de gérer vos événements en langage naturel.
+
+### Installation
+
+**Prérequis** : Node.js v18+
+
+\`\`\`bash
+npm install -g github:cladjidane/eventlite-mcp-server
+\`\`\`
+
+### Configuration Claude Desktop
+
+Ajoutez dans \`~/Library/Application Support/Claude/claude_desktop_config.json\` (macOS) :
+
+\`\`\`json
+{
+  "mcpServers": {
+    "eventlite": {
+      "command": "eventlite-mcp-server",
+      "env": {
+        "EVENTLITE_API_URL": "https://eventlite.context-collective.org",
+        "EVENTLITE_API_KEY": "evl_xxxxxxxxxxxxx"
+      }
+    }
+  }
+}
+\`\`\`
+
+### Outils disponibles
+
+- \`list_events\` - Lister les événements
+- \`get_event\` - Détails d'un événement
+- \`create_event\` - Créer un événement
+- \`update_event\` - Modifier un événement
+- \`delete_event\` - Supprimer un événement
+- \`list_registrations\` - Lister les inscriptions
+- \`register_attendee\` - Inscrire un participant
+- \`unregister_attendee\` - Annuler une inscription
+- \`send_notification\` - Envoyer un email
+- \`upload_image\` - Uploader une image de couverture
+
+### Exemples
+
+Une fois configuré, parlez simplement à Claude :
+- *"Crée un meetup IA le 15 mars à 19h au WeWork Paris, max 50 personnes"*
+- *"Inscris alice@test.com au workshop React"*
+- *"Envoie un rappel aux inscrits confirmés"*
+
+Documentation complète : [github.com/cladjidane/eventlite-mcp-server](https://github.com/cladjidane/eventlite-mcp-server)
 `;
 
 /**
