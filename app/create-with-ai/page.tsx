@@ -182,6 +182,35 @@ export default function CreateWithAIPage() {
                 Décrivez votre événement en quelques phrases, l'IA s'occupe du reste
               </CardDescription>
             </CardHeader>
+
+            {/* How it works */}
+            <div className="mx-6 mb-2 p-4 bg-muted/50 rounded-lg border">
+              <h4 className="font-medium text-sm mb-3">Comment ça marche ?</h4>
+              <ol className="text-sm text-muted-foreground space-y-2">
+                <li className="flex gap-2">
+                  <span className="font-medium text-primary">1.</span>
+                  <span>Décrivez votre événement en langage naturel (date, lieu, capacité...)</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="font-medium text-primary">2.</span>
+                  <span>L'IA analyse et structure les informations automatiquement</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="font-medium text-primary">3.</span>
+                  <span>Vérifiez le résultat et entrez l'email de votre compte EventLite</span>
+                </li>
+                <li className="flex gap-2">
+                  <span className="font-medium text-primary">4.</span>
+                  <span>Recevez un email avec un lien pour valider et publier</span>
+                </li>
+              </ol>
+              <p className="text-xs text-muted-foreground mt-3 pt-3 border-t">
+                <strong>Prérequis :</strong> Vous devez avoir un compte EventLite.{" "}
+                <Link href="/login" className="text-primary underline">
+                  Créer un compte
+                </Link>
+              </p>
+            </div>
             <CardContent className="space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="brief">Votre brief</Label>
