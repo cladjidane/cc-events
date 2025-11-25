@@ -72,6 +72,18 @@ export async function POST(request: NextRequest) {
 
   const data = validation.data;
 
+  // Vérifier que l'utilisateur existe
+  const user = await db.user.findUnique({
+    where: { email: data.email },
+  });
+
+  if (!user) {
+    return errorResponse(
+      "Aucun compte n'existe avec cet email. Veuillez d'abord créer un compte sur la plateforme.",
+      404
+    );
+  }
+
   // Parser les dates
   const startAt = new Date(data.startAt);
   const endAt = data.endAt ? new Date(data.endAt) : null;

@@ -108,24 +108,34 @@ export default async function ApprovePage({ params, searchParams }: Props) {
     }
 
     // Créer l'événement
-    // Trouver ou créer l'utilisateur
-    let user = await db.user.findUnique({
+    // Récupérer l'utilisateur (doit exister, vérifié à la création de la demande)
+    const user = await db.user.findUnique({
       where: { email: pendingEvent.email },
     });
 
     if (!user) {
-      // Créer un compte avec mot de passe aléatoire (l'utilisateur devra reset)
-      const bcrypt = await import("bcryptjs");
-      const randomPassword = Math.random().toString(36).slice(-12);
-      const hashedPassword = await bcrypt.hash(randomPassword, 10);
-
-      user = await db.user.create({
-        data: {
-          email: pendingEvent.email,
-          password: hashedPassword,
-          name: pendingEvent.email.split("@")[0],
-        },
-      });
+      // Ne devrait pas arriver, mais au cas où
+      await db.pendingEvent.delete({ where: { id: pendingEvent.id } });
+      return (
+        <PageLayout>
+          <Card className="border-2 border-destructive/50">
+            <CardHeader className="text-center">
+              <div className="mx-auto w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mb-4">
+                <X className="w-8 h-8 text-destructive" />
+              </div>
+              <CardTitle className="text-2xl">Compte introuvable</CardTitle>
+              <CardDescription>
+                Le compte associé à cette demande n'existe plus.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="text-center">
+              <Button asChild>
+                <Link href="/login">Se connecter</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </PageLayout>
+      );
     }
 
     // Générer le slug

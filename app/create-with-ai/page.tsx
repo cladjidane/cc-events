@@ -374,7 +374,7 @@ export default function CreateWithAIPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="space-y-2">
-                <Label htmlFor="email">Votre email</Label>
+                <Label htmlFor="email">Votre email (compte existant)</Label>
                 <Input
                   id="email"
                   type="email"
@@ -384,7 +384,10 @@ export default function CreateWithAIPage() {
                 />
                 <p className="text-xs text-muted-foreground">
                   Vous recevrez un email avec un lien pour valider et publier votre événement.
-                  Si vous avez déjà un compte, l'événement sera associé à votre compte.
+                  <strong> Un compte EventLite est requis.</strong>{" "}
+                  <Link href="/login" className="text-primary underline">
+                    Créer un compte
+                  </Link>
                 </p>
               </div>
 
