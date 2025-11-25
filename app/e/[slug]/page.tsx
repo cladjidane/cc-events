@@ -65,9 +65,9 @@ export default async function EventPage({ params }: Props) {
           Retour aux événements
         </Link>
 
-        <div className="grid gap-8 lg:grid-cols-3">
+        <div className="grid gap-8 lg:grid-cols-5">
           {/* Event Details */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-3">
             <div className="mb-4 flex flex-wrap items-center gap-2">
               <Badge variant={event.mode === "ONLINE" ? "secondary" : "outline"} className="badge-float">
                 {event.mode === "ONLINE" ? "En ligne" : "Présentiel"}
@@ -174,8 +174,9 @@ export default async function EventPage({ params }: Props) {
           </div>
 
           {/* Registration Form */}
-          <div className="lg:col-span-1">
-            <Card className="card-3d sticky top-24 overflow-hidden border-2 border-border">
+          <div className="lg:col-span-2">
+            <div className="sticky top-24">
+            <Card className="card-3d overflow-hidden border-2 border-border">
               {/* Decorative accent */}
               <div className="h-1.5 bg-gradient-to-r from-primary via-emerald-500 to-accent" />
 
@@ -237,6 +238,7 @@ export default async function EventPage({ params }: Props) {
                 )}
               </CardContent>
             </Card>
+            </div>
           </div>
         </div>
       </main>
