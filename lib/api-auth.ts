@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { db } from "@/lib/db";
+import { createHash } from "crypto";
 
 export type ApiUser = {
   id: string;
@@ -8,10 +9,15 @@ export type ApiUser = {
   role: "ADMIN" | "ORGANIZER";
 };
 
+// Hasher le token pour comparaison
+function hashToken(token: string): string {
+  return createHash("sha256").update(token).digest("hex");
+}
+
 /**
  * Vérifie l'authentification API via header Authorization: Bearer <API_KEY>
- * L'API Key est le NEXTAUTH_SECRET + user email encodé en base64
- * Format: base64(email:NEXTAUTH_SECRET)
+ * L'API Key est un token généré via /dashboard/settings
+ * Format: evl_xxxxxxxxxxxxxxxxxxxxxxxxxxxx
  */
 export async function verifyApiKey(request: NextRequest): Promise<ApiUser | null> {
   const authHeader = request.headers.get("Authorization");
@@ -20,19 +26,65 @@ export async function verifyApiKey(request: NextRequest): Promise<ApiUser | null
     return null;
   }
 
-  const apiKey = authHeader.slice(7);
+  const token = authHeader.slice(7);
+
+  // Vérifier le format du token
+  if (!token.startsWith("evl_")) {
+    // Fallback temporaire pour l'ancien format base64 (à retirer plus tard)
+    return verifyLegacyApiKey(token);
+  }
 
   try {
-    // Décoder l'API key (format: base64(email:secret))
+    const hashedKey = hashToken(token);
+
+    const apiKey = await db.apiKey.findUnique({
+      where: { key: hashedKey },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            role: true,
+          },
+        },
+      },
+    });
+
+    if (!apiKey) {
+      return null;
+    }
+
+    // Vérifier expiration
+    if (apiKey.expiresAt && apiKey.expiresAt < new Date()) {
+      return null;
+    }
+
+    // Mettre à jour lastUsedAt (sans bloquer)
+    db.apiKey.update({
+      where: { id: apiKey.id },
+      data: { lastUsedAt: new Date() },
+    }).catch(() => {}); // Fire and forget
+
+    return apiKey.user as ApiUser;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Fallback pour l'ancien format base64(email:secret)
+ * À RETIRER une fois la migration terminée
+ */
+async function verifyLegacyApiKey(apiKey: string): Promise<ApiUser | null> {
+  try {
     const decoded = Buffer.from(apiKey, "base64").toString("utf-8");
     const [email, secret] = decoded.split(":");
 
-    // Vérifier le secret
     if (secret !== process.env.NEXTAUTH_SECRET) {
       return null;
     }
 
-    // Récupérer l'utilisateur
     const user = await db.user.findUnique({
       where: { email },
       select: {

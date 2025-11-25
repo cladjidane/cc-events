@@ -86,6 +86,7 @@ model User {
   role      Role      @default(ORGANIZER)
   events    Event[]
   webhooks  Webhook[]
+  apiKeys   ApiKey[]
   accounts  Account[]
   sessions  Session[]
   createdAt DateTime  @default(now())
@@ -164,6 +165,25 @@ model PendingEvent {
 
   approvalToken   String   @unique @default(uuid())
   approvalExpires DateTime
+
+  createdAt   DateTime  @default(now())
+}
+
+// ============================================
+// API KEYS
+// ============================================
+
+model ApiKey {
+  id          String    @id @default(uuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name        String    // Nom descriptif (ex: "MCP Server", "CI/CD")
+  key         String    @unique // Le token hashé (SHA-256)
+  prefix      String    // Les 8 premiers caractères pour identification (ex: "evl_abc1")
+
+  lastUsedAt  DateTime?
+  expiresAt   DateTime? // null = jamais
 
   createdAt   DateTime  @default(now())
 }

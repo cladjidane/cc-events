@@ -11,7 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Calendar, LayoutDashboard, LogOut, User } from "lucide-react";
+import { Calendar, LayoutDashboard, LogOut, User, Settings } from "lucide-react";
 import { logout } from "@/actions/auth";
 
 export default async function DashboardLayout({
@@ -80,6 +80,12 @@ export default async function DashboardLayout({
                 <Link href="/" className="cursor-pointer">
                   <User className="mr-2 h-4 w-4" />
                   Voir le site
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/dashboard/settings" className="cursor-pointer">
+                  <Settings className="mr-2 h-4 w-4" />
+                  Paramètres
                 </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />

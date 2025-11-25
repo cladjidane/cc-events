@@ -428,15 +428,18 @@ export default function ForAIPage() {
             <CardContent className="pt-6">
               <div className="space-y-4">
                 <div>
-                  <p className="text-sm font-medium mb-2">Générer une API Key :</p>
-                  <div className="bg-muted p-3 rounded-lg font-mono text-sm overflow-x-auto">
-                    <code>base64(email:NEXTAUTH_SECRET)</code>
-                  </div>
+                  <p className="text-sm font-medium mb-2">1. Générer une API Key :</p>
+                  <p className="text-sm text-muted-foreground mb-2">
+                    Connectez-vous et allez dans{" "}
+                    <Link href="/dashboard/settings" className="text-primary hover:underline">
+                      Paramètres → Clés API
+                    </Link>
+                  </p>
                 </div>
                 <div>
-                  <p className="text-sm font-medium mb-2">Utilisation dans les headers :</p>
+                  <p className="text-sm font-medium mb-2">2. Utilisation dans les headers :</p>
                   <div className="bg-muted p-3 rounded-lg font-mono text-sm overflow-x-auto">
-                    <code>Authorization: Bearer &lt;API_KEY&gt;</code>
+                    <code>Authorization: Bearer evl_xxxxxxxxxxxxx</code>
                   </div>
                 </div>
               </div>
