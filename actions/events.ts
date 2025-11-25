@@ -272,6 +272,64 @@ export async function getEventsForDashboard() {
   });
 }
 
+// Créer un événement à partir des données IA (pour utilisateurs connectés)
+export async function createEventFromAI(data: {
+  title: string;
+  subtitle?: string;
+  description?: string;
+  mode: "IN_PERSON" | "ONLINE";
+  location?: string;
+  startAt: string;
+  endAt?: string;
+  capacity?: number;
+  status?: "DRAFT" | "PUBLISHED";
+}): Promise<ActionResult<Event>> {
+  try {
+    const user = await requireAuth();
+
+    // Calculer endAt si non fourni (startAt + 2h)
+    const startAtDate = new Date(data.startAt);
+    const endAtDate = data.endAt
+      ? new Date(data.endAt)
+      : new Date(startAtDate.getTime() + 2 * 60 * 60 * 1000);
+
+    // Générer un slug unique
+    let slug = slugify(data.title);
+    const existingSlug = await db.event.findUnique({ where: { slug } });
+    if (existingSlug) {
+      slug = `${slug}-${Date.now().toString(36)}`;
+    }
+
+    const event = await db.event.create({
+      data: {
+        title: data.title,
+        subtitle: data.subtitle || null,
+        description: data.description || null,
+        mode: data.mode,
+        location: data.location || null,
+        startAt: startAtDate,
+        endAt: endAtDate,
+        timezone: "Europe/Paris",
+        capacity: data.capacity || null,
+        waitlist: true,
+        status: data.status || "DRAFT",
+        slug,
+        organizerId: user.id,
+      },
+    });
+
+    revalidatePath("/dashboard/events");
+
+    return { success: true, data: event };
+  } catch (error) {
+    console.error("Erreur création événement IA:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Une erreur est survenue",
+    };
+  }
+}
+
 // Liste des événements publics
 export async function getPublishedEvents() {
   return db.event.findMany({

@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, Users, Clock, Plus } from "lucide-react";
+import { Calendar, Users, Clock, Plus, Sparkles } from "lucide-react";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -57,12 +57,20 @@ export default async function DashboardPage() {
             Bienvenue, {session.user.name || session.user.email}
           </p>
         </div>
-        <Link href="/dashboard/events/new">
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Nouvel événement
-          </Button>
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/dashboard/events/new-ai">
+            <Button variant="outline">
+              <Sparkles className="mr-2 h-4 w-4" />
+              Créer avec l'IA
+            </Button>
+          </Link>
+          <Link href="/dashboard/events/new">
+            <Button>
+              <Plus className="mr-2 h-4 w-4" />
+              Nouvel événement
+            </Button>
+          </Link>
+        </div>
       </div>
 
       {/* Stats */}
