@@ -237,6 +237,9 @@ export default async function HomePage() {
             <div className="flex items-center gap-2.5">
               <IsoLogo className="w-6 h-8" />
               <span className="font-bold">EventLite</span>
+              <span className="text-xs text-muted-foreground ml-2">
+                v{process.env.npm_package_version || "0.1.0"}-{(process.env.VERCEL_GIT_COMMIT_SHA || "dev").slice(0, 7)}
+              </span>
             </div>
             <p className="text-sm text-muted-foreground">
               &copy; {new Date().getFullYear()} EventLite — Gestion d'événements simplifiée
