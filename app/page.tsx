@@ -91,9 +91,9 @@ export default async function HomePage() {
             </p>
 
             <div className="flex flex-col sm:flex-row justify-center gap-4">
-              <Link href="/login">
+              <Link href="/create-with-ai">
                 <Button size="lg" className="btn-3d text-base px-8 py-6 bg-primary hover:bg-primary/90">
-                  Commencer maintenant
+                  Créer avec l'IA
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>

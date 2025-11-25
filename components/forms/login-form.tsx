@@ -24,7 +24,7 @@ export function LoginForm() {
           name="email"
           type="email"
           required
-          placeholder="admin@eventlite.fr"
+          placeholder="email@exemple.com"
           disabled={isPending}
         />
       </div>
@@ -59,9 +59,6 @@ export function LoginForm() {
         )}
       </Button>
 
-      <p className="text-center text-sm text-muted-foreground">
-        Compte de test : admin@eventlite.fr / admin123
-      </p>
     </form>
   );
 }

@@ -143,6 +143,32 @@ model Registration {
 }
 
 // ============================================
+// PENDING EVENTS (AI-created, awaiting approval)
+// ============================================
+
+model PendingEvent {
+  id          String    @id @default(uuid())
+  email       String    // Email pour validation
+
+  title       String
+  subtitle    String?
+  description String?   @db.Text
+
+  mode        EventMode
+  location    String?
+
+  startAt     DateTime
+  endAt       DateTime?
+
+  capacity    Int?
+
+  approvalToken   String   @unique @default(uuid())
+  approvalExpires DateTime
+
+  createdAt   DateTime  @default(now())
+}
+
+// ============================================
 // WEBHOOKS
 // ============================================
 
