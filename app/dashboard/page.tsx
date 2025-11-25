@@ -3,7 +3,8 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Calendar, Users, Clock, Plus, Sparkles } from "lucide-react";
+import { Calendar, Users, Clock, Plus, Sparkles, FileEdit } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
@@ -20,10 +21,11 @@ export default async function DashboardPage() {
   const where =
     session.user.role === "ADMIN" ? {} : { organizerId: session.user.id };
 
-  const [totalEvents, publishedEvents, totalRegistrations, upcomingEvents] =
+  const [totalEvents, publishedEvents, draftEvents, totalRegistrations, upcomingEvents, drafts] =
     await Promise.all([
       db.event.count({ where }),
       db.event.count({ where: { ...where, status: "PUBLISHED" } }),
+      db.event.count({ where: { ...where, status: "DRAFT" } }),
       db.registration.count({
         where: {
           event: where,
@@ -45,6 +47,14 @@ export default async function DashboardPage() {
             },
           },
         },
+      }),
+      db.event.findMany({
+        where: {
+          ...where,
+          status: "DRAFT",
+        },
+        orderBy: { updatedAt: "desc" },
+        take: 5,
       }),
     ]);
 
@@ -74,7 +84,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium">
@@ -87,6 +97,17 @@ export default async function DashboardPage() {
             <p className="text-xs text-muted-foreground">
               {publishedEvents} publié{publishedEvents > 1 ? "s" : ""}
             </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium">Brouillons</CardTitle>
+            <FileEdit className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{draftEvents}</div>
+            <p className="text-xs text-muted-foreground">à finaliser</p>
           </CardContent>
         </Card>
 
@@ -112,6 +133,52 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Drafts */}
+      {drafts.length > 0 && (
+        <Card className="border-amber-200 bg-amber-50/50 dark:border-amber-800 dark:bg-amber-950/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <FileEdit className="h-5 w-5 text-amber-600" />
+              Brouillons à finaliser
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {drafts.map((event) => (
+                <div
+                  key={event.id}
+                  className="flex items-center justify-between rounded-lg bg-background p-3"
+                >
+                  <div className="flex items-center gap-3">
+                    <Badge variant="secondary">Brouillon</Badge>
+                    <div>
+                      <Link
+                        href={`/dashboard/events/${event.id}`}
+                        className="font-medium hover:underline"
+                      >
+                        {event.title}
+                      </Link>
+                      <p className="text-sm text-muted-foreground">
+                        {new Date(event.startAt).toLocaleDateString("fr-FR", {
+                          day: "numeric",
+                          month: "long",
+                          year: "numeric",
+                        })}
+                      </p>
+                    </div>
+                  </div>
+                  <Link href={`/dashboard/events/${event.id}?edit=true`}>
+                    <Button size="sm" variant="outline">
+                      Finaliser
+                    </Button>
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Upcoming Events */}
       <Card>

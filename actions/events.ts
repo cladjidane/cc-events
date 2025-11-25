@@ -330,6 +330,84 @@ export async function createEventFromAI(data: {
   }
 }
 
+// Mettre à jour un événement à partir des données IA (pour utilisateurs connectés)
+export async function updateEventFromAI(
+  eventId: string,
+  data: {
+    title: string;
+    subtitle?: string;
+    description?: string;
+    mode: "IN_PERSON" | "ONLINE";
+    location?: string;
+    startAt: string;
+    endAt?: string;
+    capacity?: number;
+    status?: "DRAFT" | "PUBLISHED";
+  }
+): Promise<ActionResult<Event>> {
+  try {
+    const user = await requireAuth();
+
+    const existingEvent = await db.event.findUnique({
+      where: { id: eventId },
+    });
+
+    if (!existingEvent) {
+      return { success: false, error: "Événement introuvable" };
+    }
+
+    // Vérifier que l'utilisateur est propriétaire ou admin
+    if (existingEvent.organizerId !== user.id && user.role !== "ADMIN") {
+      return { success: false, error: "Non autorisé" };
+    }
+
+    // Calculer endAt si non fourni (startAt + 2h)
+    const startAtDate = new Date(data.startAt);
+    const endAtDate = data.endAt
+      ? new Date(data.endAt)
+      : new Date(startAtDate.getTime() + 2 * 60 * 60 * 1000);
+
+    // Mettre à jour le slug si le titre a changé
+    let slug = existingEvent.slug;
+    if (data.title !== existingEvent.title) {
+      slug = slugify(data.title);
+      const existingSlug = await db.event.findFirst({
+        where: { slug, id: { not: eventId } },
+      });
+      if (existingSlug) {
+        slug = `${slug}-${Date.now().toString(36)}`;
+      }
+    }
+
+    const event = await db.event.update({
+      where: { id: eventId },
+      data: {
+        title: data.title,
+        subtitle: data.subtitle || null,
+        description: data.description || null,
+        mode: data.mode,
+        location: data.location || null,
+        startAt: startAtDate,
+        endAt: endAtDate,
+        capacity: data.capacity || null,
+        status: data.status || existingEvent.status,
+        slug,
+      },
+    });
+
+    revalidatePath("/dashboard/events");
+    revalidatePath(`/e/${event.slug}`);
+
+    return { success: true, data: event };
+  } catch (error) {
+    console.error("Erreur mise à jour événement IA:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Une erreur est survenue",
+    };
+  }
+}
+
 // Liste des événements publics
 export async function getPublishedEvents() {
   return db.event.findMany({

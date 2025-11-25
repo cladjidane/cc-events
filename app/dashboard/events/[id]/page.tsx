@@ -15,6 +15,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { EventForm } from "@/components/forms/event-form";
 import { DeleteEventButton } from "@/components/delete-event-button";
+import { RegenerateBriefButton } from "@/components/regenerate-brief-button";
 import { formatDateRange } from "@/lib/utils";
 import type { Metadata } from "next";
 
@@ -106,6 +107,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
               </Button>
             </Link>
           )}
+          <RegenerateBriefButton eventId={id} />
           <Link href={`/dashboard/events/${id}?edit=true`}>
             <Button variant="outline" size="sm">
               <Pencil className="mr-2 h-4 w-4" />

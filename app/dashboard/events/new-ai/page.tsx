@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Sparkles,
   ArrowRight,
@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { createEventFromAI } from "@/actions/events";
+import { createEventFromAI, updateEventFromAI } from "@/actions/events";
 
 type ParsedEvent = {
   title: string;
@@ -44,11 +44,25 @@ type Step = "brief" | "review";
 
 export default function NewAIEventPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Mode édition si editId est présent
+  const editId = searchParams.get("editId");
+  const initialBrief = searchParams.get("brief") || "";
+  const isEditMode = !!editId;
+
   const [step, setStep] = useState<Step>("brief");
-  const [brief, setBrief] = useState("");
+  const [brief, setBrief] = useState(initialBrief);
   const [parsed, setParsed] = useState<ParsedEvent | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Initialiser le brief depuis l'URL en mode édition
+  useEffect(() => {
+    if (initialBrief) {
+      setBrief(decodeURIComponent(initialBrief));
+    }
+  }, [initialBrief]);
 
   const handleParseBrief = async () => {
     setIsLoading(true);
@@ -83,13 +97,24 @@ export default function NewAIEventPage() {
     setError(null);
 
     try {
-      const result = await createEventFromAI({
-        ...parsed,
-        status,
-      });
+      let result;
+
+      if (isEditMode && editId) {
+        // Mode édition : mettre à jour l'événement existant
+        result = await updateEventFromAI(editId, {
+          ...parsed,
+          status,
+        });
+      } else {
+        // Mode création : créer un nouvel événement
+        result = await createEventFromAI({
+          ...parsed,
+          status,
+        });
+      }
 
       if (!result.success) {
-        throw new Error(result.error || "Erreur lors de la création");
+        throw new Error(result.error || "Erreur lors de la sauvegarde");
       }
 
       router.push(`/dashboard/events/${result.data?.id}`);
@@ -171,9 +196,11 @@ export default function NewAIEventPage() {
                 <Sparkles className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <CardTitle>Créer avec l'IA</CardTitle>
+                <CardTitle>{isEditMode ? "Modifier avec l'IA" : "Créer avec l'IA"}</CardTitle>
                 <CardDescription>
-                  Décrivez votre événement, l'IA structure les informations
+                  {isEditMode
+                    ? "Modifiez le brief généré et relancez l'analyse"
+                    : "Décrivez votre événement, l'IA structure les informations"}
                 </CardDescription>
               </div>
             </div>
@@ -350,6 +377,8 @@ export default function NewAIEventPage() {
               >
                 {isLoading ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
+                ) : isEditMode ? (
+                  "Sauvegarder en brouillon"
                 ) : (
                   "Enregistrer en brouillon"
                 )}
@@ -363,7 +392,7 @@ export default function NewAIEventPage() {
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
                   <>
-                    Publier
+                    {isEditMode ? "Sauvegarder et publier" : "Publier"}
                     <Check className="ml-2 h-4 w-4" />
                   </>
                 )}
