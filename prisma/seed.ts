@@ -37,6 +37,17 @@ async function main() {
   });
   console.log("✅ Organisateur créé:", organizer.email);
 
+  // Créer le compte Context Collective (admin)
+  const ccAdmin = await prisma.user.create({
+    data: {
+      email: "contact@context-collective.org",
+      password: hashedPassword,
+      name: "Context Collective",
+      role: Role.ADMIN,
+    },
+  });
+  console.log("✅ Context Collective créé:", ccAdmin.email);
+
   // Événement 1: Publié, en présentiel avec coordonnées GPS
   const event1 = await prisma.event.create({
     data: {

@@ -92,6 +92,8 @@ export async function POST(request: NextRequest) {
   const approvalExpires = new Date(Date.now() + 24 * 60 * 60 * 1000);
 
   try {
+    console.log("[events/request] Creating PendingEvent for:", data.email);
+
     // Créer le PendingEvent
     const pendingEvent = await db.pendingEvent.create({
       data: {
@@ -154,7 +156,9 @@ export async function POST(request: NextRequest) {
       201
     );
   } catch (error) {
-    console.error("Erreur création demande:", error);
-    return errorResponse("Erreur lors de la création de la demande", 500);
+    console.error("[events/request] Error:", error);
+    // Retourner plus de détails en dev
+    const errorMessage = error instanceof Error ? error.message : "Erreur inconnue";
+    return errorResponse(`Erreur lors de la création de la demande: ${errorMessage}`, 500);
   }
 }
