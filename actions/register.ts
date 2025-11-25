@@ -7,6 +7,10 @@ import { revalidatePath } from "next/cache";
 import { formatDateRange } from "@/lib/utils";
 import { sendEmail } from "@/lib/email";
 import { ConfirmationEmail } from "@/emails/confirmation";
+import { NewRegistrationOrganizerEmail } from "@/emails/new-registration-organizer";
+import { WaitlistPromotedEmail } from "@/emails/waitlist-promoted";
+import { CancellationConfirmationEmail } from "@/emails/cancellation-confirmation";
+import { CancellationOrganizerEmail } from "@/emails/cancellation-organizer";
 import { triggerWebhooks } from "@/lib/webhooks";
 import type { ActionResult } from "@/lib/utils";
 
@@ -78,16 +82,16 @@ export async function registerForEvent(
   try {
     // 2. Transaction pour gérer la concurrence
     const result = await db.$transaction(async (tx) => {
-      // Récupérer l'événement avec verrouillage
+      // Récupérer l'événement avec verrouillage et infos organisateur
       const event = await tx.event.findUnique({
         where: { id: eventId },
         include: {
-          _count: {
-            select: {
-              registrations: {
-                where: { status: RegistrationStatus.CONFIRMED },
-              },
-            },
+          organizer: {
+            select: { email: true, name: true },
+          },
+          registrations: {
+            where: { status: { not: RegistrationStatus.CANCELLED } },
+            select: { status: true },
           },
         },
       });
@@ -115,10 +119,17 @@ export async function registerForEvent(
         },
       });
 
+      // Calculer les counts
+      const confirmedCount = event.registrations.filter(
+        (r) => r.status === RegistrationStatus.CONFIRMED
+      ).length;
+      const waitlistCount = event.registrations.filter(
+        (r) => r.status === RegistrationStatus.WAITLIST
+      ).length;
+
       if (existingRegistration) {
         if (existingRegistration.status === RegistrationStatus.CANCELLED) {
           // Réactiver l'inscription annulée
-          const confirmedCount = event._count.registrations;
           const hasCapacity = !event.capacity || confirmedCount < event.capacity;
 
           const newStatus = hasCapacity
@@ -149,6 +160,8 @@ export async function registerForEvent(
                 : "Vous avez été ajouté à la liste d'attente.",
             registration: updatedRegistration,
             event,
+            confirmedCount: newStatus === RegistrationStatus.CONFIRMED ? confirmedCount + 1 : confirmedCount,
+            waitlistCount: newStatus === RegistrationStatus.WAITLIST ? waitlistCount + 1 : waitlistCount,
           };
         }
 
@@ -156,7 +169,6 @@ export async function registerForEvent(
       }
 
       // 4. Déterminer le statut
-      const confirmedCount = event._count.registrations;
       const hasCapacity = !event.capacity || confirmedCount < event.capacity;
 
       let status: RegistrationStatus;
@@ -184,7 +196,14 @@ export async function registerForEvent(
         },
       });
 
-      return { status, message, registration, event };
+      return {
+        status,
+        message,
+        registration,
+        event,
+        confirmedCount: status === RegistrationStatus.CONFIRMED ? confirmedCount + 1 : confirmedCount,
+        waitlistCount: status === RegistrationStatus.WAITLIST ? waitlistCount + 1 : waitlistCount,
+      };
     });
 
     // 6. Revalider la page
@@ -208,9 +227,28 @@ export async function registerForEvent(
         eventUrl: `${appUrl}/e/${result.event.slug}`,
         isWaitlist: result.status === RegistrationStatus.WAITLIST,
       }),
-    }).catch((err) => console.error("Erreur envoi email:", err));
+    }).catch((err) => console.error("Erreur envoi email participant:", err));
 
-    // 8. Déclencher les webhooks (async, ne bloque pas la réponse)
+    // 8. Envoyer email à l'organisateur (async)
+    sendEmail({
+      to: result.event.organizer.email,
+      subject: `Nouvelle inscription - ${result.event.title}`,
+      react: NewRegistrationOrganizerEmail({
+        organizerName: result.event.organizer.name || "Organisateur",
+        participantName: `${firstName} ${lastName}`,
+        participantEmail: email,
+        eventTitle: result.event.title,
+        eventDate: formatDateRange(result.event.startAt, result.event.endAt),
+        registrationStatus: result.status as "CONFIRMED" | "WAITLIST",
+        confirmedCount: result.confirmedCount,
+        capacity: result.event.capacity,
+        waitlistCount: result.waitlistCount,
+        dashboardUrl: `${appUrl}/dashboard/events/${result.event.id}/registrations`,
+        notes: notes || undefined,
+      }),
+    }).catch((err) => console.error("Erreur envoi email organisateur:", err));
+
+    // 9. Déclencher les webhooks (async, ne bloque pas la réponse)
     triggerWebhooks(result.event.organizerId, "registration.created", {
       registration: {
         id: result.registration.id,
@@ -242,10 +280,22 @@ export async function registerForEvent(
 export async function cancelRegistration(
   cancelToken: string
 ): Promise<ActionResult> {
+  const appUrl = process.env.APP_URL || "http://localhost:3000";
+
   try {
     const registration = await db.registration.findUnique({
       where: { cancelToken },
-      include: { event: true },
+      include: {
+        event: {
+          include: {
+            organizer: { select: { email: true, name: true } },
+            registrations: {
+              where: { status: { not: RegistrationStatus.CANCELLED } },
+              select: { status: true },
+            },
+          },
+        },
+      },
     });
 
     if (!registration) {
@@ -279,6 +329,21 @@ export async function cancelRegistration(
           data: { status: RegistrationStatus.CONFIRMED },
         });
 
+        // Envoyer email au participant promu
+        sendEmail({
+          to: nextInWaitlist.email,
+          subject: `Bonne nouvelle ! Place confirmée - ${registration.event.title}`,
+          react: WaitlistPromotedEmail({
+            firstName: nextInWaitlist.firstName,
+            eventTitle: registration.event.title,
+            eventDate: formatDateRange(registration.event.startAt, registration.event.endAt),
+            eventLocation: registration.event.location || undefined,
+            isOnline: registration.event.mode === "ONLINE",
+            eventUrl: `${appUrl}/e/${registration.event.slug}`,
+            cancelUrl: `${appUrl}/cancel/${nextInWaitlist.cancelToken}`,
+          }),
+        }).catch((err) => console.error("Erreur envoi email promotion:", err));
+
         // Déclencher webhook de promotion
         triggerWebhooks(registration.event.organizerId, "registration.promoted", {
           registration: {
@@ -311,6 +376,61 @@ export async function cancelRegistration(
         slug: registration.event.slug,
       },
     }).catch((err) => console.error("Erreur webhook:", err));
+
+    // Calculer les counts après annulation
+    const confirmedCount = registration.event.registrations.filter(
+      (r) => r.status === RegistrationStatus.CONFIRMED
+    ).length - (registration.status === RegistrationStatus.CONFIRMED ? 1 : 0);
+    const waitlistCount = registration.event.registrations.filter(
+      (r) => r.status === RegistrationStatus.WAITLIST
+    ).length - (registration.status === RegistrationStatus.WAITLIST ? 1 : 0);
+
+    // Envoyer email de confirmation d'annulation au participant
+    sendEmail({
+      to: registration.email,
+      subject: `Inscription annulée - ${registration.event.title}`,
+      react: CancellationConfirmationEmail({
+        firstName: registration.firstName,
+        eventTitle: registration.event.title,
+        eventDate: formatDateRange(registration.event.startAt, registration.event.endAt),
+        eventUrl: `${appUrl}/e/${registration.event.slug}`,
+      }),
+    }).catch((err) => console.error("Erreur envoi email annulation participant:", err));
+
+    // Trouver si quelqu'un a été promu (pour l'email organisateur)
+    const promotedParticipant = registration.status === RegistrationStatus.CONFIRMED
+      ? await db.registration.findFirst({
+          where: {
+            eventId: registration.eventId,
+            status: RegistrationStatus.CONFIRMED,
+            id: { not: registration.id },
+          },
+          orderBy: { updatedAt: "desc" },
+        })
+      : null;
+
+    // Envoyer email à l'organisateur
+    sendEmail({
+      to: registration.event.organizer.email,
+      subject: `Annulation - ${registration.event.title}`,
+      react: CancellationOrganizerEmail({
+        organizerName: registration.event.organizer.name || "Organisateur",
+        participantName: `${registration.firstName} ${registration.lastName}`,
+        participantEmail: registration.email,
+        eventTitle: registration.event.title,
+        eventDate: formatDateRange(registration.event.startAt, registration.event.endAt),
+        confirmedCount,
+        capacity: registration.event.capacity,
+        waitlistCount,
+        promotedParticipant: promotedParticipant
+          ? {
+              name: `${promotedParticipant.firstName} ${promotedParticipant.lastName}`,
+              email: promotedParticipant.email,
+            }
+          : undefined,
+        dashboardUrl: `${appUrl}/dashboard/events/${registration.event.id}/registrations`,
+      }),
+    }).catch((err) => console.error("Erreur envoi email annulation organisateur:", err));
 
     revalidatePath(`/e/${registration.event.slug}`);
 
