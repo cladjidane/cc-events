@@ -1,0 +1,142 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ============================================
+// ENUMS
+// ============================================
+
+enum Role {
+  ADMIN
+  ORGANIZER
+}
+
+enum EventStatus {
+  DRAFT
+  PUBLISHED
+  CLOSED
+  CANCELLED
+}
+
+enum EventMode {
+  ONLINE
+  IN_PERSON
+}
+
+enum RegistrationStatus {
+  CONFIRMED
+  WAITLIST
+  CANCELLED
+}
+
+// ============================================
+// AUTH MODELS (NextAuth.js)
+// ============================================
+
+model Account {
+  id                String  @id @default(uuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ============================================
+// APPLICATION MODELS
+// ============================================
+
+model User {
+  id        String    @id @default(uuid())
+  email     String    @unique
+  password  String
+  name      String?
+  role      Role      @default(ORGANIZER)
+  events    Event[]
+  accounts  Account[]
+  sessions  Session[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+}
+
+model Event {
+  id          String      @id @default(uuid())
+  slug        String      @unique
+  organizerId String
+  organizer   User        @relation(fields: [organizerId], references: [id])
+
+  title       String
+  subtitle    String?
+  description String?     @db.Text
+  coverImage  String?
+
+  mode        EventMode
+  location    String?
+  latitude    Float?
+  longitude   Float?
+
+  startAt     DateTime
+  endAt       DateTime
+  timezone    String
+
+  capacity    Int?
+  waitlist    Boolean     @default(false)
+
+  status      EventStatus @default(DRAFT)
+
+  registrations Registration[]
+
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model Registration {
+  id          String             @id @default(uuid())
+  eventId     String
+  event       Event              @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  email       String
+  firstName   String
+  lastName    String
+  notes       String?
+
+  status      RegistrationStatus @default(CONFIRMED)
+  cancelToken String             @unique @default(uuid())
+
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
+  @@unique([email, eventId])
+}
