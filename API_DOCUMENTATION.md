@@ -524,3 +524,455 @@ Champs recommandés: description, location, capacity, status (PUBLISHED pour ren
 
 L'utilisateur demande: [REQUÊTE]
 ```
+
+---
+
+## Inscriptions (Registrations)
+
+### Lister les inscriptions d'un événement
+
+```
+GET /api/v1/events/{id}/registrations
+```
+
+**Query Parameters**:
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| status | string | - | Filtrer: `CONFIRMED`, `WAITLIST`, `CANCELLED` |
+| limit | integer | 50 | Max résultats (max: 100) |
+| offset | integer | 0 | Pour pagination |
+
+**Réponse**:
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "email": "participant@example.com",
+      "name": "Jean Dupont",
+      "first_name": "Jean",
+      "last_name": "Dupont",
+      "notes": "Végétarien",
+      "status": "CONFIRMED",
+      "registered_at": "2025-01-20T10:00:00.000Z",
+      "updated_at": "2025-01-20T10:00:00.000Z"
+    }
+  ],
+  "pagination": { "total": 25, "limit": 50, "offset": 0, "has_more": false }
+}
+```
+
+---
+
+### Inscrire un participant
+
+```
+POST /api/v1/events/{id}/registrations
+```
+
+**Body**:
+```json
+{
+  "email": "participant@example.com",
+  "name": "Jean Dupont",
+  "notes": "Végétarien"
+}
+```
+
+**Comportement**:
+- Si capacité disponible → `CONFIRMED`
+- Si complet + waitlist → `WAITLIST`
+- Si complet sans waitlist → erreur 400
+
+**Réponse** (201):
+```json
+{
+  "data": {
+    "id": "uuid",
+    "email": "participant@example.com",
+    "name": "Jean Dupont",
+    "status": "CONFIRMED",
+    "event": {
+      "id": "uuid",
+      "title": "Meetup IA Paris",
+      "slug": "meetup-ia-paris"
+    }
+  }
+}
+```
+
+---
+
+### Récupérer une inscription
+
+```
+GET /api/v1/events/{id}/registrations/{email}
+```
+
+Le paramètre `email` doit être URL-encoded (ex: `user%40example.com`).
+
+---
+
+### Modifier une inscription
+
+```
+PATCH /api/v1/events/{id}/registrations/{email}
+```
+
+**Body** (tous optionnels):
+```json
+{
+  "name": "Nouveau Nom",
+  "notes": "Nouvelles notes",
+  "status": "CONFIRMED"
+}
+```
+
+⚠️ Changer le status de `CONFIRMED` à autre chose promouvra le premier de la waitlist.
+
+---
+
+### Annuler une inscription
+
+```
+DELETE /api/v1/events/{id}/registrations/{email}
+```
+
+**Réponse**:
+```json
+{
+  "data": {
+    "message": "Registration cancelled successfully",
+    "promoted": {
+      "email": "next@example.com",
+      "name": "Marie Martin"
+    }
+  }
+}
+```
+
+Le champ `promoted` est présent si quelqu'un a été promu depuis la waitlist.
+
+---
+
+## Notifications
+
+### Envoyer une notification aux participants
+
+```
+POST /api/v1/events/{id}/notify
+```
+
+**Query Parameters**:
+| Param | Type | Default | Description |
+|-------|------|---------|-------------|
+| preview | boolean | false | Mode aperçu (ne pas envoyer) |
+
+**Body**:
+```json
+{
+  "subject": "Rappel : Meetup IA demain !",
+  "message": "N'oubliez pas notre événement demain à 19h.\n\nÀ très vite !",
+  "target": "confirmed",
+  "includeEventDetails": true
+}
+```
+
+| Champ | Type | Default | Description |
+|-------|------|---------|-------------|
+| subject | string | *requis* | Objet de l'email |
+| message | string | *requis* | Corps du message (\\n pour sauts de ligne) |
+| target | string | "all" | `all`, `confirmed`, ou `waitlist` |
+| includeEventDetails | boolean | true | Inclure les infos de l'événement |
+
+**Réponse**:
+```json
+{
+  "data": {
+    "sent": 23,
+    "failed": 1,
+    "target": "confirmed",
+    "total": 24,
+    "details": [
+      { "email": "user@example.com", "status": "sent" },
+      { "email": "bad@email", "status": "failed", "error": "Invalid email" }
+    ]
+  }
+}
+```
+
+---
+
+## Webhooks
+
+### Lister les webhooks
+
+```
+GET /api/v1/webhooks
+```
+
+**Réponse**:
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "url": "https://mon-serveur.com/webhook",
+      "events": ["registration.created", "registration.cancelled"],
+      "active": true,
+      "created_at": "2025-01-20T10:00:00.000Z"
+    }
+  ],
+  "available_events": [
+    "registration.created",
+    "registration.cancelled",
+    "registration.promoted",
+    "event.created",
+    "event.updated",
+    "event.published",
+    "event.cancelled"
+  ]
+}
+```
+
+---
+
+### Créer un webhook
+
+```
+POST /api/v1/webhooks
+```
+
+**Body**:
+```json
+{
+  "url": "https://mon-serveur.com/webhook",
+  "events": ["registration.created", "registration.cancelled"],
+  "secret": "mon-secret-optionnel"
+}
+```
+
+**Important**: Le secret est retourné uniquement à la création. Conservez-le !
+
+**Réponse** (201):
+```json
+{
+  "data": {
+    "id": "uuid",
+    "url": "https://mon-serveur.com/webhook",
+    "events": ["registration.created", "registration.cancelled"],
+    "active": true,
+    "secret": "abc123...",
+    "created_at": "2025-01-20T10:00:00.000Z"
+  },
+  "message": "Webhook created. Save the secret - it won't be shown again."
+}
+```
+
+---
+
+### Payload webhook
+
+Les payloads sont signés avec HMAC-SHA256. Le header `X-EventLite-Signature` contient `sha256=<signature>`.
+
+**Exemple de payload**:
+```json
+{
+  "id": "delivery-uuid",
+  "event": "registration.created",
+  "timestamp": "2025-01-20T10:00:00.000Z",
+  "data": {
+    "registration": {
+      "id": "uuid",
+      "email": "user@example.com",
+      "name": "Jean Dupont",
+      "status": "CONFIRMED"
+    },
+    "event": {
+      "id": "uuid",
+      "title": "Meetup IA Paris",
+      "slug": "meetup-ia-paris"
+    }
+  }
+}
+```
+
+**Vérification de signature (Node.js)**:
+```javascript
+const crypto = require('crypto');
+
+function verifyWebhook(payload, signature, secret) {
+  const expected = 'sha256=' + crypto
+    .createHmac('sha256', secret)
+    .update(JSON.stringify(payload))
+    .digest('hex');
+  return signature === expected;
+}
+```
+
+---
+
+### Tester un webhook
+
+```
+POST /api/v1/webhooks/{id}/test
+```
+
+Envoie un payload de test au webhook.
+
+**Réponse**:
+```json
+{
+  "data": {
+    "success": true,
+    "url": "https://mon-serveur.com/webhook",
+    "status_code": 200,
+    "duration_ms": 234
+  }
+}
+```
+
+---
+
+## Statistiques
+
+### Statistiques globales
+
+```
+GET /api/v1/stats
+```
+
+**Réponse**:
+```json
+{
+  "data": {
+    "events": {
+      "total": 15,
+      "by_status": {
+        "draft": 5,
+        "published": 8,
+        "closed": 1,
+        "cancelled": 1
+      }
+    },
+    "registrations": {
+      "total": 234,
+      "by_status": {
+        "confirmed": 189,
+        "waitlist": 45
+      }
+    },
+    "upcoming": [
+      {
+        "id": "uuid",
+        "title": "Meetup IA Paris",
+        "slug": "meetup-ia-paris",
+        "start_at": "2025-02-15T19:00:00.000Z",
+        "confirmed": 25,
+        "capacity": 30
+      }
+    ],
+    "recent_activity": [
+      {
+        "type": "registration",
+        "action": "created",
+        "email": "user@example.com",
+        "name": "Jean Dupont",
+        "event_title": "Meetup IA Paris",
+        "at": "2025-01-20T10:00:00.000Z"
+      }
+    ]
+  }
+}
+```
+
+---
+
+### Statistiques d'un événement
+
+```
+GET /api/v1/stats/events/{id}
+```
+
+**Réponse**:
+```json
+{
+  "data": {
+    "event": {
+      "id": "uuid",
+      "title": "Meetup IA Paris",
+      "slug": "meetup-ia-paris",
+      "status": "PUBLISHED",
+      "start_at": "2025-02-15T19:00:00.000Z"
+    },
+    "registrations": {
+      "confirmed": 25,
+      "waitlist": 5,
+      "cancelled": 3,
+      "total": 30,
+      "capacity": 30,
+      "fill_rate": 83.3,
+      "spots_left": 5
+    },
+    "timeline": [
+      { "date": "2025-01-15", "cumulative": 5 },
+      { "date": "2025-01-16", "cumulative": 12 },
+      { "date": "2025-01-17", "cumulative": 25 }
+    ]
+  }
+}
+```
+
+---
+
+## MCP Server (Claude)
+
+EventLite dispose d'un serveur MCP pour une intégration native avec Claude Desktop.
+
+### Installation
+
+Ajoutez à votre `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "eventlite": {
+      "command": "npx",
+      "args": ["@eventlite/mcp-server"],
+      "env": {
+        "EVENTLITE_API_URL": "https://your-app.vercel.app",
+        "EVENTLITE_API_KEY": "votre-api-key"
+      }
+    }
+  }
+}
+```
+
+### Tools disponibles
+
+| Tool | Description |
+|------|-------------|
+| `list_events` | Lister les événements |
+| `get_event` | Détails d'un événement |
+| `create_event` | Créer un événement |
+| `update_event` | Modifier un événement |
+| `delete_event` | Supprimer un événement |
+| `list_registrations` | Lister les inscrits |
+| `register_attendee` | Inscrire quelqu'un |
+| `unregister_attendee` | Désinscrire quelqu'un |
+| `send_notification` | Envoyer un email |
+
+### Exemple d'utilisation
+
+```
+User: "Montre-moi mes événements"
+Claude: Tu as 2 événements à venir:
+        - Meetup IA Paris (mardi 19h) - 23/30 places
+        - Workshop React (jeudi 14h) - 15 inscrits
+
+User: "Inscris alice@example.com au Meetup IA"
+Claude: ✅ Alice a été inscrite avec le statut CONFIRMED
+
+User: "Envoie un rappel aux inscrits du Meetup"
+Claude: ✅ Email de rappel envoyé à 23 personnes
+```

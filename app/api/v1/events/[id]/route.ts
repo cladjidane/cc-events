@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { verifyApiKey, jsonResponse, errorResponse } from "@/lib/api-auth";
 import { eventSchema } from "@/lib/validations";
 import { slugify } from "@/lib/utils";
+import { triggerWebhooks } from "@/lib/webhooks";
 
 type Params = {
   params: Promise<{ id: string }>;
@@ -144,6 +145,26 @@ export async function PATCH(request: NextRequest, { params }: Params) {
         slug,
       },
     });
+
+    // Déclencher webhooks selon le type de changement
+    const webhookEvent =
+      body.status === "PUBLISHED" && existingEvent.status !== "PUBLISHED"
+        ? "event.published"
+        : body.status === "CANCELLED" && existingEvent.status !== "CANCELLED"
+          ? "event.cancelled"
+          : "event.updated";
+
+    triggerWebhooks(existingEvent.organizerId, webhookEvent, {
+      event: {
+        id: event.id,
+        title: event.title,
+        slug: event.slug,
+        status: event.status,
+        previous_status: existingEvent.status,
+        start_at: event.startAt.toISOString(),
+        end_at: event.endAt.toISOString(),
+      },
+    }).catch((err) => console.error("Erreur webhook:", err));
 
     return jsonResponse({ data: event });
   } catch (error) {

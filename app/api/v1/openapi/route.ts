@@ -164,6 +164,172 @@ Toutes les dates sont en ISO 8601: \`2025-01-15T14:00:00.000Z\`
           error: { type: "string", description: "Message d'erreur" },
         },
       },
+      Registration: {
+        type: "object",
+        properties: {
+          id: { type: "string", format: "uuid", description: "Identifiant unique" },
+          email: { type: "string", format: "email", description: "Email du participant" },
+          name: { type: "string", description: "Nom complet (prénom + nom)" },
+          first_name: { type: "string", description: "Prénom" },
+          last_name: { type: "string", description: "Nom de famille" },
+          notes: { type: "string", nullable: true, description: "Notes optionnelles" },
+          status: {
+            type: "string",
+            enum: ["CONFIRMED", "WAITLIST", "CANCELLED"],
+            description: "CONFIRMED = inscrit, WAITLIST = en attente, CANCELLED = annulé",
+          },
+          registered_at: { type: "string", format: "date-time", description: "Date d'inscription" },
+          updated_at: { type: "string", format: "date-time", description: "Dernière mise à jour" },
+          event: {
+            type: "object",
+            properties: {
+              id: { type: "string", format: "uuid" },
+              title: { type: "string" },
+              slug: { type: "string" },
+            },
+          },
+        },
+        required: ["id", "email", "name", "status", "registered_at"],
+      },
+      RegistrationCreate: {
+        type: "object",
+        properties: {
+          email: { type: "string", format: "email", description: "Email du participant" },
+          name: { type: "string", description: "Nom complet (sera séparé en prénom/nom)", minLength: 1, maxLength: 100 },
+          notes: { type: "string", description: "Notes optionnelles", maxLength: 500 },
+        },
+        required: ["email", "name"],
+        example: {
+          email: "participant@example.com",
+          name: "Jean Dupont",
+          notes: "Végétarien",
+        },
+      },
+      RegistrationUpdate: {
+        type: "object",
+        description: "Tous les champs sont optionnels. Seuls les champs fournis seront mis à jour.",
+        properties: {
+          name: { type: "string", description: "Nom complet", minLength: 1, maxLength: 100 },
+          notes: { type: "string", nullable: true, description: "Notes optionnelles", maxLength: 500 },
+          status: {
+            type: "string",
+            enum: ["CONFIRMED", "WAITLIST", "CANCELLED"],
+            description: "Nouveau statut",
+          },
+        },
+        example: {
+          status: "CONFIRMED",
+        },
+      },
+      NotificationRequest: {
+        type: "object",
+        properties: {
+          subject: { type: "string", description: "Objet de l'email", minLength: 1, maxLength: 200 },
+          message: { type: "string", description: "Contenu du message (supporte les sauts de ligne)", minLength: 1, maxLength: 5000 },
+          target: {
+            type: "string",
+            enum: ["all", "confirmed", "waitlist"],
+            default: "all",
+            description: "Destinataires ciblés",
+          },
+          includeEventDetails: {
+            type: "boolean",
+            default: true,
+            description: "Inclure les détails de l'événement dans l'email",
+          },
+        },
+        required: ["subject", "message"],
+        example: {
+          subject: "Rappel : Meetup IA demain !",
+          message: "N'oubliez pas notre événement demain à 19h.\n\nNous avons préparé une soirée exceptionnelle !\n\nÀ très vite !",
+          target: "confirmed",
+          includeEventDetails: true,
+        },
+      },
+      Webhook: {
+        type: "object",
+        properties: {
+          id: { type: "string", format: "uuid" },
+          url: { type: "string", format: "uri", description: "URL de destination" },
+          events: {
+            type: "array",
+            items: { type: "string" },
+            description: "Événements écoutés",
+          },
+          active: { type: "boolean", description: "Webhook actif ou non" },
+          created_at: { type: "string", format: "date-time" },
+          updated_at: { type: "string", format: "date-time" },
+        },
+      },
+      WebhookCreate: {
+        type: "object",
+        properties: {
+          url: { type: "string", format: "uri", description: "URL de destination (doit être HTTPS en production)" },
+          events: {
+            type: "array",
+            items: {
+              type: "string",
+              enum: [
+                "registration.created",
+                "registration.cancelled",
+                "registration.promoted",
+                "event.created",
+                "event.updated",
+                "event.published",
+                "event.cancelled",
+              ],
+            },
+            minItems: 1,
+            description: "Événements à écouter",
+          },
+          secret: { type: "string", minLength: 16, description: "Secret pour signer les payloads (optionnel, généré si omis)" },
+        },
+        required: ["url", "events"],
+        example: {
+          url: "https://mon-serveur.com/webhook",
+          events: ["registration.created", "registration.cancelled"],
+        },
+      },
+      WebhookUpdate: {
+        type: "object",
+        properties: {
+          url: { type: "string", format: "uri" },
+          events: { type: "array", items: { type: "string" } },
+          active: { type: "boolean" },
+          secret: { type: "string", minLength: 16 },
+        },
+        example: {
+          active: false,
+        },
+      },
+      WebhookPayload: {
+        type: "object",
+        description: "Format du payload envoyé aux webhooks",
+        properties: {
+          id: { type: "string", format: "uuid", description: "ID unique de la livraison" },
+          event: { type: "string", description: "Type d'événement" },
+          timestamp: { type: "string", format: "date-time" },
+          data: { type: "object", description: "Données de l'événement" },
+        },
+        example: {
+          id: "550e8400-e29b-41d4-a716-446655440000",
+          event: "registration.created",
+          timestamp: "2025-01-20T10:00:00.000Z",
+          data: {
+            registration: {
+              id: "uuid",
+              email: "user@example.com",
+              name: "Jean Dupont",
+              status: "CONFIRMED",
+            },
+            event: {
+              id: "uuid",
+              title: "Meetup IA Paris",
+              slug: "meetup-ia-paris",
+            },
+          },
+        },
+      },
     },
   },
   paths: {
@@ -442,9 +608,809 @@ L'URL retournée peut ensuite être utilisée dans le champ \`coverImage\` lors 
         },
       },
     },
+    "/api/v1/events/{id}/registrations": {
+      get: {
+        summary: "Lister les inscriptions",
+        description: "Retourne toutes les inscriptions d'un événement. Par défaut, exclut les inscriptions annulées.",
+        tags: ["Registrations"],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "ID (UUID) ou slug de l'événement",
+          },
+          {
+            name: "status",
+            in: "query",
+            schema: { type: "string", enum: ["CONFIRMED", "WAITLIST", "CANCELLED"] },
+            description: "Filtrer par statut",
+          },
+          {
+            name: "limit",
+            in: "query",
+            schema: { type: "integer", default: 50, maximum: 100 },
+            description: "Nombre max de résultats",
+          },
+          {
+            name: "offset",
+            in: "query",
+            schema: { type: "integer", default: 0 },
+            description: "Offset pour pagination",
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Liste des inscriptions",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    data: { type: "array", items: { $ref: "#/components/schemas/Registration" } },
+                    pagination: {
+                      type: "object",
+                      properties: {
+                        total: { type: "integer" },
+                        limit: { type: "integer" },
+                        offset: { type: "integer" },
+                        has_more: { type: "boolean" },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "401": { description: "Non authentifié" },
+          "404": { description: "Événement non trouvé" },
+        },
+      },
+      post: {
+        summary: "Inscrire un participant",
+        description: `
+Inscrit un participant à un événement.
+
+**Comportement automatique:**
+- Si l'événement a de la capacité disponible → statut CONFIRMED
+- Si complet et waitlist activée → statut WAITLIST
+- Si complet sans waitlist → erreur 400
+- Si l'email est déjà inscrit avec statut CANCELLED → réactivation de l'inscription
+        `.trim(),
+        tags: ["Registrations"],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "ID (UUID) ou slug de l'événement",
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/RegistrationCreate" },
+            },
+          },
+        },
+        responses: {
+          "201": {
+            description: "Inscription créée",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    data: { $ref: "#/components/schemas/Registration" },
+                  },
+                },
+              },
+            },
+          },
+          "400": { description: "Données invalides ou événement complet" },
+          "401": { description: "Non authentifié" },
+          "404": { description: "Événement non trouvé" },
+        },
+      },
+    },
+    "/api/v1/events/{id}/registrations/{email}": {
+      get: {
+        summary: "Récupérer une inscription",
+        description: "Récupère les détails d'une inscription par email.",
+        tags: ["Registrations"],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "ID (UUID) ou slug de l'événement",
+          },
+          {
+            name: "email",
+            in: "path",
+            required: true,
+            schema: { type: "string", format: "email" },
+            description: "Email du participant (URL-encoded)",
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Détails de l'inscription",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    data: { $ref: "#/components/schemas/Registration" },
+                  },
+                },
+              },
+            },
+          },
+          "404": { description: "Événement ou inscription non trouvé" },
+        },
+      },
+      patch: {
+        summary: "Modifier une inscription",
+        description: `
+Met à jour une inscription existante.
+
+**Gestion automatique de la waitlist:**
+- Si on passe de CONFIRMED à CANCELLED → le premier en WAITLIST est promu
+- Si on passe à CONFIRMED → vérifie qu'il reste de la capacité
+        `.trim(),
+        tags: ["Registrations"],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "ID (UUID) ou slug de l'événement",
+          },
+          {
+            name: "email",
+            in: "path",
+            required: true,
+            schema: { type: "string", format: "email" },
+            description: "Email du participant (URL-encoded)",
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/RegistrationUpdate" },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Inscription mise à jour",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    data: { $ref: "#/components/schemas/Registration" },
+                  },
+                },
+              },
+            },
+          },
+          "400": { description: "Données invalides ou capacité dépassée" },
+          "404": { description: "Événement ou inscription non trouvé" },
+        },
+      },
+      delete: {
+        summary: "Annuler une inscription",
+        description: `
+Annule une inscription (passe le statut à CANCELLED).
+
+**Gestion automatique de la waitlist:**
+Si l'inscription annulée était CONFIRMED, le premier en WAITLIST est automatiquement promu à CONFIRMED.
+La réponse inclut les informations du participant promu le cas échéant.
+        `.trim(),
+        tags: ["Registrations"],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "ID (UUID) ou slug de l'événement",
+          },
+          {
+            name: "email",
+            in: "path",
+            required: true,
+            schema: { type: "string", format: "email" },
+            description: "Email du participant (URL-encoded)",
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Inscription annulée",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    data: {
+                      type: "object",
+                      properties: {
+                        message: { type: "string" },
+                        promoted: {
+                          type: "object",
+                          nullable: true,
+                          description: "Participant promu depuis la waitlist (si applicable)",
+                          properties: {
+                            email: { type: "string" },
+                            name: { type: "string" },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+                example: {
+                  data: {
+                    message: "Registration cancelled successfully",
+                    promoted: {
+                      email: "next@example.com",
+                      name: "Marie Martin",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "400": { description: "Inscription déjà annulée" },
+          "404": { description: "Événement ou inscription non trouvé" },
+        },
+      },
+    },
+    "/api/v1/events/{id}/notify": {
+      post: {
+        summary: "Envoyer une notification",
+        description: `
+Envoie un email personnalisé aux participants d'un événement.
+
+**Modes d'envoi:**
+- Ajoutez \`?preview=true\` pour voir un aperçu sans envoyer
+- Sans le paramètre, les emails sont envoyés immédiatement
+
+**Cibles disponibles:**
+- \`all\` : Tous les inscrits (confirmés + waitlist)
+- \`confirmed\` : Uniquement les confirmés
+- \`waitlist\` : Uniquement la liste d'attente
+        `.trim(),
+        tags: ["Notifications"],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "ID (UUID) ou slug de l'événement",
+          },
+          {
+            name: "preview",
+            in: "query",
+            schema: { type: "boolean", default: false },
+            description: "Mode aperçu (ne pas envoyer)",
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/NotificationRequest" },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Notifications envoyées",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    data: {
+                      type: "object",
+                      properties: {
+                        sent: { type: "integer", description: "Nombre d'emails envoyés" },
+                        failed: { type: "integer", description: "Nombre d'échecs" },
+                        target: { type: "string" },
+                        total: { type: "integer" },
+                        details: {
+                          type: "array",
+                          items: {
+                            type: "object",
+                            properties: {
+                              email: { type: "string" },
+                              status: { type: "string", enum: ["sent", "failed"] },
+                              error: { type: "string" },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+                example: {
+                  data: {
+                    sent: 23,
+                    failed: 1,
+                    target: "confirmed",
+                    total: 24,
+                    details: [
+                      { email: "user@example.com", status: "sent" },
+                      { email: "bad@email", status: "failed", error: "Invalid email" },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+          "400": { description: "Données invalides ou aucun destinataire" },
+          "401": { description: "Non authentifié" },
+          "404": { description: "Événement non trouvé" },
+        },
+      },
+    },
+    "/api/v1/webhooks": {
+      get: {
+        summary: "Lister les webhooks",
+        description: "Retourne tous les webhooks de l'utilisateur authentifié avec la liste des événements disponibles.",
+        tags: ["Webhooks"],
+        responses: {
+          "200": {
+            description: "Liste des webhooks",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    data: { type: "array", items: { $ref: "#/components/schemas/Webhook" } },
+                    available_events: {
+                      type: "array",
+                      items: { type: "string" },
+                      description: "Liste des événements disponibles",
+                    },
+                  },
+                },
+              },
+            },
+          },
+          "401": { description: "Non authentifié" },
+        },
+      },
+      post: {
+        summary: "Créer un webhook",
+        description: `
+Crée un nouveau webhook. Le secret est retourné uniquement à la création - conservez-le précieusement.
+
+**Signature des payloads:**
+Les payloads sont signés avec HMAC-SHA256. Le header \`X-EventLite-Signature\` contient la signature au format \`sha256=<signature>\`.
+
+**Vérification en JavaScript:**
+\`\`\`javascript
+const crypto = require('crypto');
+const signature = crypto
+  .createHmac('sha256', webhookSecret)
+  .update(JSON.stringify(payload))
+  .digest('hex');
+const isValid = \`sha256=\${signature}\` === req.headers['x-eventlite-signature'];
+\`\`\`
+        `.trim(),
+        tags: ["Webhooks"],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/WebhookCreate" },
+            },
+          },
+        },
+        responses: {
+          "201": {
+            description: "Webhook créé (inclut le secret)",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    data: {
+                      allOf: [
+                        { $ref: "#/components/schemas/Webhook" },
+                        {
+                          type: "object",
+                          properties: {
+                            secret: { type: "string", description: "Secret pour vérifier les signatures (affiché uniquement à la création)" },
+                          },
+                        },
+                      ],
+                    },
+                    message: { type: "string" },
+                  },
+                },
+              },
+            },
+          },
+          "400": { description: "Données invalides" },
+          "401": { description: "Non authentifié" },
+        },
+      },
+    },
+    "/api/v1/webhooks/{id}": {
+      get: {
+        summary: "Récupérer un webhook",
+        description: "Récupère les détails d'un webhook par son ID.",
+        tags: ["Webhooks"],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string", format: "uuid" },
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Détails du webhook",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    data: { $ref: "#/components/schemas/Webhook" },
+                  },
+                },
+              },
+            },
+          },
+          "404": { description: "Webhook non trouvé" },
+        },
+      },
+      patch: {
+        summary: "Modifier un webhook",
+        description: "Met à jour un webhook existant. Vous pouvez modifier l'URL, les événements, l'état actif et le secret.",
+        tags: ["Webhooks"],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string", format: "uuid" },
+          },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/WebhookUpdate" },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Webhook mis à jour",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    data: { $ref: "#/components/schemas/Webhook" },
+                  },
+                },
+              },
+            },
+          },
+          "400": { description: "Données invalides" },
+          "404": { description: "Webhook non trouvé" },
+        },
+      },
+      delete: {
+        summary: "Supprimer un webhook",
+        description: "Supprime définitivement un webhook.",
+        tags: ["Webhooks"],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string", format: "uuid" },
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Webhook supprimé",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    message: { type: "string" },
+                  },
+                },
+              },
+            },
+          },
+          "404": { description: "Webhook non trouvé" },
+        },
+      },
+    },
+    "/api/v1/webhooks/{id}/test": {
+      post: {
+        summary: "Tester un webhook",
+        description: "Envoie un payload de test au webhook pour vérifier qu'il fonctionne correctement.",
+        tags: ["Webhooks"],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string", format: "uuid" },
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Résultat du test",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    data: {
+                      type: "object",
+                      properties: {
+                        success: { type: "boolean" },
+                        url: { type: "string" },
+                        status_code: { type: "integer" },
+                        error: { type: "string" },
+                        duration_ms: { type: "integer" },
+                      },
+                    },
+                  },
+                },
+                example: {
+                  data: {
+                    success: true,
+                    url: "https://mon-serveur.com/webhook",
+                    status_code: 200,
+                    duration_ms: 234,
+                  },
+                },
+              },
+            },
+          },
+          "404": { description: "Webhook non trouvé" },
+        },
+      },
+    },
+    "/api/v1/stats": {
+      get: {
+        summary: "Statistiques globales",
+        description: "Retourne les statistiques globales : nombre d'événements, inscriptions, événements à venir et activité récente.",
+        tags: ["Stats"],
+        responses: {
+          "200": {
+            description: "Statistiques globales",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    data: {
+                      type: "object",
+                      properties: {
+                        events: {
+                          type: "object",
+                          properties: {
+                            total: { type: "integer" },
+                            by_status: {
+                              type: "object",
+                              properties: {
+                                draft: { type: "integer" },
+                                published: { type: "integer" },
+                                closed: { type: "integer" },
+                                cancelled: { type: "integer" },
+                              },
+                            },
+                          },
+                        },
+                        registrations: {
+                          type: "object",
+                          properties: {
+                            total: { type: "integer" },
+                            by_status: {
+                              type: "object",
+                              properties: {
+                                confirmed: { type: "integer" },
+                                waitlist: { type: "integer" },
+                              },
+                            },
+                          },
+                        },
+                        upcoming: {
+                          type: "array",
+                          items: {
+                            type: "object",
+                            properties: {
+                              id: { type: "string" },
+                              title: { type: "string" },
+                              slug: { type: "string" },
+                              start_at: { type: "string", format: "date-time" },
+                              confirmed: { type: "integer" },
+                              capacity: { type: "integer", nullable: true },
+                            },
+                          },
+                        },
+                        recent_activity: {
+                          type: "array",
+                          items: {
+                            type: "object",
+                            properties: {
+                              type: { type: "string" },
+                              action: { type: "string" },
+                              email: { type: "string" },
+                              name: { type: "string" },
+                              event_title: { type: "string" },
+                              at: { type: "string", format: "date-time" },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+                example: {
+                  data: {
+                    events: {
+                      total: 15,
+                      by_status: { draft: 5, published: 8, closed: 1, cancelled: 1 },
+                    },
+                    registrations: {
+                      total: 234,
+                      by_status: { confirmed: 189, waitlist: 45 },
+                    },
+                    upcoming: [
+                      {
+                        id: "uuid",
+                        title: "Meetup IA Paris",
+                        slug: "meetup-ia-paris",
+                        start_at: "2025-02-15T19:00:00.000Z",
+                        confirmed: 25,
+                        capacity: 30,
+                      },
+                    ],
+                    recent_activity: [
+                      {
+                        type: "registration",
+                        action: "created",
+                        email: "user@example.com",
+                        name: "Jean Dupont",
+                        event_title: "Meetup IA Paris",
+                        at: "2025-01-20T10:00:00.000Z",
+                      },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+          "401": { description: "Non authentifié" },
+        },
+      },
+    },
+    "/api/v1/stats/events/{id}": {
+      get: {
+        summary: "Statistiques d'un événement",
+        description: "Retourne les statistiques détaillées d'un événement : inscriptions, taux de remplissage et timeline.",
+        tags: ["Stats"],
+        parameters: [
+          {
+            name: "id",
+            in: "path",
+            required: true,
+            schema: { type: "string" },
+            description: "ID (UUID) ou slug de l'événement",
+          },
+        ],
+        responses: {
+          "200": {
+            description: "Statistiques de l'événement",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    data: {
+                      type: "object",
+                      properties: {
+                        event: {
+                          type: "object",
+                          properties: {
+                            id: { type: "string" },
+                            title: { type: "string" },
+                            slug: { type: "string" },
+                            status: { type: "string" },
+                            start_at: { type: "string", format: "date-time" },
+                          },
+                        },
+                        registrations: {
+                          type: "object",
+                          properties: {
+                            confirmed: { type: "integer" },
+                            waitlist: { type: "integer" },
+                            cancelled: { type: "integer" },
+                            total: { type: "integer" },
+                            capacity: { type: "integer", nullable: true },
+                            fill_rate: { type: "number", nullable: true },
+                            spots_left: { type: "integer", nullable: true },
+                          },
+                        },
+                        timeline: {
+                          type: "array",
+                          description: "Inscriptions cumulées par jour",
+                          items: {
+                            type: "object",
+                            properties: {
+                              date: { type: "string", format: "date" },
+                              cumulative: { type: "integer" },
+                            },
+                          },
+                        },
+                      },
+                    },
+                  },
+                },
+                example: {
+                  data: {
+                    event: {
+                      id: "uuid",
+                      title: "Meetup IA Paris",
+                      slug: "meetup-ia-paris",
+                      status: "PUBLISHED",
+                      start_at: "2025-02-15T19:00:00.000Z",
+                    },
+                    registrations: {
+                      confirmed: 25,
+                      waitlist: 5,
+                      cancelled: 3,
+                      total: 30,
+                      capacity: 30,
+                      fill_rate: 83.3,
+                      spots_left: 5,
+                    },
+                    timeline: [
+                      { date: "2025-01-15", cumulative: 5 },
+                      { date: "2025-01-16", cumulative: 12 },
+                      { date: "2025-01-17", cumulative: 25 },
+                    ],
+                  },
+                },
+              },
+            },
+          },
+          "401": { description: "Non authentifié" },
+          "404": { description: "Événement non trouvé" },
+        },
+      },
+    },
   },
   tags: [
     { name: "Events", description: "Gestion des événements" },
+    { name: "Registrations", description: "Gestion des inscriptions" },
+    { name: "Notifications", description: "Envoi d'emails aux participants" },
+    { name: "Webhooks", description: "Intégrations temps réel via webhooks" },
+    { name: "Stats", description: "Statistiques et analytics" },
     { name: "Upload", description: "Upload de fichiers" },
   ],
 };

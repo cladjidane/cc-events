@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { verifyApiKey, jsonResponse, errorResponse } from "@/lib/api-auth";
 import { eventSchema } from "@/lib/validations";
 import { slugify } from "@/lib/utils";
+import { triggerWebhooks } from "@/lib/webhooks";
 import { EventStatus } from "@prisma/client";
 
 /**
@@ -107,6 +108,18 @@ export async function POST(request: NextRequest) {
         organizerId: user.id,
       },
     });
+
+    // Déclencher webhook event.created (async)
+    triggerWebhooks(user.id, "event.created", {
+      event: {
+        id: event.id,
+        title: event.title,
+        slug: event.slug,
+        status: event.status,
+        start_at: event.startAt.toISOString(),
+        end_at: event.endAt.toISOString(),
+      },
+    }).catch((err) => console.error("Erreur webhook:", err));
 
     return jsonResponse({ data: event }, 201);
   } catch (error) {

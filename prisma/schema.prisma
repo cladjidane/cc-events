@@ -85,6 +85,7 @@ model User {
   name      String?
   role      Role      @default(ORGANIZER)
   events    Event[]
+  webhooks  Webhook[]
   accounts  Account[]
   sessions  Session[]
   createdAt DateTime  @default(now())
@@ -139,4 +140,22 @@ model Registration {
   updatedAt   DateTime           @updatedAt
 
   @@unique([email, eventId])
+}
+
+// ============================================
+// WEBHOOKS
+// ============================================
+
+model Webhook {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  url       String   // URL de destination
+  secret    String   // Pour signer les payloads (HMAC-SHA256)
+  events    String[] // Événements à écouter
+  active    Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

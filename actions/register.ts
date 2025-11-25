@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { formatDateRange } from "@/lib/utils";
 import { sendEmail } from "@/lib/email";
 import { ConfirmationEmail } from "@/emails/confirmation";
+import { triggerWebhooks } from "@/lib/webhooks";
 import type { ActionResult } from "@/lib/utils";
 
 export type RegistrationResult = ActionResult<{
@@ -209,6 +210,21 @@ export async function registerForEvent(
       }),
     }).catch((err) => console.error("Erreur envoi email:", err));
 
+    // 8. Déclencher les webhooks (async, ne bloque pas la réponse)
+    triggerWebhooks(result.event.organizerId, "registration.created", {
+      registration: {
+        id: result.registration.id,
+        email: result.registration.email,
+        name: `${result.registration.firstName} ${result.registration.lastName}`,
+        status: result.registration.status,
+      },
+      event: {
+        id: result.event.id,
+        title: result.event.title,
+        slug: result.event.slug,
+      },
+    }).catch((err) => console.error("Erreur webhook:", err));
+
     return {
       success: true,
       data: { status: result.status, message: result.message },
@@ -263,9 +279,38 @@ export async function cancelRegistration(
           data: { status: RegistrationStatus.CONFIRMED },
         });
 
-        // TODO: Envoyer email de promotion au participant promu
+        // Déclencher webhook de promotion
+        triggerWebhooks(registration.event.organizerId, "registration.promoted", {
+          registration: {
+            id: nextInWaitlist.id,
+            email: nextInWaitlist.email,
+            name: `${nextInWaitlist.firstName} ${nextInWaitlist.lastName}`,
+            status: "CONFIRMED",
+            previous_status: "WAITLIST",
+          },
+          event: {
+            id: registration.event.id,
+            title: registration.event.title,
+            slug: registration.event.slug,
+          },
+        }).catch((err) => console.error("Erreur webhook:", err));
       }
     }
+
+    // Déclencher webhook d'annulation
+    triggerWebhooks(registration.event.organizerId, "registration.cancelled", {
+      registration: {
+        id: registration.id,
+        email: registration.email,
+        name: `${registration.firstName} ${registration.lastName}`,
+        status: "CANCELLED",
+      },
+      event: {
+        id: registration.event.id,
+        title: registration.event.title,
+        slug: registration.event.slug,
+      },
+    }).catch((err) => console.error("Erreur webhook:", err));
 
     revalidatePath(`/e/${registration.event.slug}`);
 
