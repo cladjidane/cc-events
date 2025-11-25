@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { Calendar, MapPin, Users, Globe, ArrowLeft, Clock, AlertCircle, Ticket } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { getEventBySlug } from "@/actions/events";
@@ -16,6 +16,8 @@ type Props = {
   params: Promise<{ slug: string }>;
 };
 
+const siteUrl = process.env.APP_URL || "https://eventlite.app";
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const event = await getEventBySlug(slug);
@@ -24,10 +26,87 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: "Événement introuvable" };
   }
 
+  const eventUrl = `${siteUrl}/e/${event.slug}`;
+  const description = event.subtitle || event.description?.slice(0, 160) || `Inscrivez-vous à ${event.title}`;
+
   return {
     title: event.title,
-    description: event.subtitle || event.description?.slice(0, 160),
+    description,
+    openGraph: {
+      title: event.title,
+      description,
+      url: eventUrl,
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: event.title,
+      description,
+    },
+    alternates: {
+      canonical: eventUrl,
+    },
   };
+}
+
+// JSON-LD structured data for events (SEO)
+function EventJsonLd({ event }: { event: NonNullable<Awaited<ReturnType<typeof getEventBySlug>>> }) {
+  const eventUrl = `${siteUrl}/e/${event.slug}`;
+
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Event",
+    name: event.title,
+    description: event.description || event.subtitle || `Événement: ${event.title}`,
+    startDate: event.startAt.toISOString(),
+    endDate: event.endAt.toISOString(),
+    eventStatus: "https://schema.org/EventScheduled",
+    eventAttendanceMode: event.mode === "ONLINE"
+      ? "https://schema.org/OnlineEventAttendanceMode"
+      : "https://schema.org/OfflineEventAttendanceMode",
+    location: event.mode === "ONLINE"
+      ? {
+          "@type": "VirtualLocation",
+          url: event.location || eventUrl,
+        }
+      : {
+          "@type": "Place",
+          name: event.location || "Lieu à confirmer",
+          address: event.location || "Lieu à confirmer",
+          ...(event.latitude && event.longitude && {
+            geo: {
+              "@type": "GeoCoordinates",
+              latitude: event.latitude,
+              longitude: event.longitude,
+            },
+          }),
+        },
+    organizer: {
+      "@type": "Person",
+      name: event.organizer.name || "Organisateur EventLite",
+    },
+    url: eventUrl,
+    ...(event.capacity && {
+      maximumAttendeeCapacity: event.capacity,
+    }),
+    offers: {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "EUR",
+      availability: event._count.confirmed >= (event.capacity || Infinity)
+        ? "https://schema.org/SoldOut"
+        : "https://schema.org/InStock",
+      url: eventUrl,
+      validFrom: new Date().toISOString(),
+    },
+  };
+
+  return (
+    <script
+      type="application/ld+json"
+      dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+    />
+  );
 }
 
 export default async function EventPage({ params }: Props) {
@@ -45,7 +124,9 @@ export default async function EventPage({ params }: Props) {
   const isPast = new Date(event.startAt) < new Date();
 
   return (
-    <div className="min-h-screen bg-background">
+    <>
+      <EventJsonLd event={event} />
+      <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="border-b border-border/50 bg-background/90 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto flex h-16 items-center justify-between px-4">
@@ -258,5 +339,6 @@ export default async function EventPage({ params }: Props) {
         </div>
       </footer>
     </div>
+    </>
   );
 }
