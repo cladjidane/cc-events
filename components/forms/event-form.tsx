@@ -97,18 +97,6 @@ export function EventForm({ event }: Props) {
           />
         </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="coverImage">Image de couverture (URL)</Label>
-          <Input
-            id="coverImage"
-            name="coverImage"
-            type="url"
-            defaultValue={event?.coverImage || ""}
-            placeholder="https://example.com/image.jpg"
-            disabled={isPending}
-          />
-        </div>
-
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="mode">Mode *</Label>
@@ -163,30 +151,16 @@ export function EventForm({ event }: Props) {
           </div>
         )}
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="startAt">Date de début *</Label>
-            <Input
-              id="startAt"
-              name="startAt"
-              type="datetime-local"
-              required
-              defaultValue={event ? formatDateForInput(event.startAt) : ""}
-              disabled={isPending}
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="endAt">Date de fin *</Label>
-            <Input
-              id="endAt"
-              name="endAt"
-              type="datetime-local"
-              required
-              defaultValue={event ? formatDateForInput(event.endAt) : ""}
-              disabled={isPending}
-            />
-          </div>
+        <div className="space-y-2">
+          <Label htmlFor="startAt">Date et heure *</Label>
+          <Input
+            id="startAt"
+            name="startAt"
+            type="datetime-local"
+            required
+            defaultValue={event ? formatDateForInput(event.startAt) : ""}
+            disabled={isPending}
+          />
         </div>
 
         <input type="hidden" name="timezone" value="Europe/Paris" />
@@ -209,14 +183,14 @@ export function EventForm({ event }: Props) {
             <Label htmlFor="waitlist">Liste d'attente</Label>
             <Select
               name="waitlist"
-              defaultValue={event?.waitlist ? "true" : "false"}
+              defaultValue={event ? (event.waitlist ? "true" : "false") : "true"}
             >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="false">Désactivée</SelectItem>
                 <SelectItem value="true">Activée</SelectItem>
+                <SelectItem value="false">Désactivée</SelectItem>
               </SelectContent>
             </Select>
           </div>

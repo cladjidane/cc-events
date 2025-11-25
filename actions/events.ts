@@ -28,17 +28,21 @@ export async function createEvent(
     const latitudeStr = formData.get("latitude");
     const longitudeStr = formData.get("longitude");
 
+    // Calculer endAt automatiquement (startAt + 2h)
+    const startAtValue = formData.get("startAt");
+    const startAtDate = startAtValue ? new Date(startAtValue as string) : new Date();
+    const endAtDate = new Date(startAtDate.getTime() + 2 * 60 * 60 * 1000);
+
     const rawData = {
       title: formData.get("title"),
       subtitle: formData.get("subtitle") || undefined,
       description: formData.get("description") || undefined,
-      coverImage: formData.get("coverImage") || undefined,
       mode: formData.get("mode"),
       location: formData.get("location") || undefined,
       latitude: latitudeStr && latitudeStr !== "" ? Number(latitudeStr) : null,
       longitude: longitudeStr && longitudeStr !== "" ? Number(longitudeStr) : null,
-      startAt: formData.get("startAt"),
-      endAt: formData.get("endAt"),
+      startAt: startAtValue,
+      endAt: endAtDate.toISOString(),
       timezone: formData.get("timezone") || "Europe/Paris",
       capacity: formData.get("capacity") ? Number(formData.get("capacity")) : null,
       waitlist: formData.get("waitlist") === "true",
@@ -106,17 +110,21 @@ export async function updateEvent(
     const latitudeStr = formData.get("latitude");
     const longitudeStr = formData.get("longitude");
 
+    // Calculer endAt automatiquement (startAt + 2h)
+    const startAtValue = formData.get("startAt");
+    const startAtDate = startAtValue ? new Date(startAtValue as string) : new Date();
+    const endAtDate = new Date(startAtDate.getTime() + 2 * 60 * 60 * 1000);
+
     const rawData = {
       title: formData.get("title"),
       subtitle: formData.get("subtitle") || undefined,
       description: formData.get("description") || undefined,
-      coverImage: formData.get("coverImage") || undefined,
       mode: formData.get("mode"),
       location: formData.get("location") || undefined,
       latitude: latitudeStr && latitudeStr !== "" ? Number(latitudeStr) : null,
       longitude: longitudeStr && longitudeStr !== "" ? Number(longitudeStr) : null,
-      startAt: formData.get("startAt"),
-      endAt: formData.get("endAt"),
+      startAt: startAtValue,
+      endAt: endAtDate.toISOString(),
       timezone: formData.get("timezone") || "Europe/Paris",
       capacity: formData.get("capacity") ? Number(formData.get("capacity")) : null,
       waitlist: formData.get("waitlist") === "true",

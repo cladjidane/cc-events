@@ -43,7 +43,6 @@ export const eventSchema = z.object({
     .max(100, "Le titre ne peut pas dépasser 100 caractères"),
   subtitle: z.string().max(200, "Le sous-titre ne peut pas dépasser 200 caractères").optional(),
   description: z.string().max(5000, "La description ne peut pas dépasser 5000 caractères").optional(),
-  coverImage: z.string().url("URL d'image invalide").optional().or(z.literal("")),
   mode: z.nativeEnum(EventMode),
   location: z.string().max(500, "L'adresse ne peut pas dépasser 500 caractères").optional(),
   latitude: z.coerce.number().min(-90).max(90).optional().nullable(),
@@ -52,7 +51,7 @@ export const eventSchema = z.object({
   endAt: z.coerce.date(),
   timezone: z.string().default("Europe/Paris"),
   capacity: z.coerce.number().int().positive().optional().nullable(),
-  waitlist: z.boolean().default(false),
+  waitlist: z.boolean().default(true),
   status: z.nativeEnum(EventStatus).default(EventStatus.DRAFT),
 }).refine(
   (data) => data.endAt > data.startAt,

@@ -14,10 +14,46 @@ export type RegistrationResult = ActionResult<{
   message: string;
 }>;
 
+// Vérifier le token Turnstile côté serveur
+async function verifyTurnstile(token: string): Promise<boolean> {
+  const secretKey = process.env.TURNSTILE_SECRET_KEY;
+  if (!secretKey) return true; // Si pas configuré, on laisse passer
+
+  try {
+    const response = await fetch(
+      "https://challenges.cloudflare.com/turnstile/v0/siteverify",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          secret: secretKey,
+          response: token,
+        }),
+      }
+    );
+    const data = await response.json();
+    return data.success === true;
+  } catch {
+    return false;
+  }
+}
+
 export async function registerForEvent(
   _prevState: RegistrationResult | null,
   formData: FormData
 ): Promise<RegistrationResult> {
+  // 0. Vérifier le captcha Turnstile
+  const turnstileToken = formData.get("turnstileToken") as string;
+  if (process.env.TURNSTILE_SECRET_KEY && turnstileToken) {
+    const isValid = await verifyTurnstile(turnstileToken);
+    if (!isValid) {
+      return {
+        success: false,
+        error: "Vérification anti-bot échouée. Veuillez réessayer.",
+      };
+    }
+  }
+
   // 1. Extraire et valider les données
   const rawData = {
     eventId: formData.get("eventId"),

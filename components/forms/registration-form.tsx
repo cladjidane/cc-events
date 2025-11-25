@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
+import { Turnstile } from "@marsidev/react-turnstile";
 import { registerForEvent, type RegistrationResult } from "@/actions/register";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +17,7 @@ type Props = {
 
 export function RegistrationForm({ eventId }: Props) {
   const formRef = useRef<HTMLFormElement>(null);
+  const [turnstileToken, setTurnstileToken] = useState<string>("");
   const [state, formAction, isPending] = useActionState<RegistrationResult | null, FormData>(
     registerForEvent,
     null
@@ -25,14 +27,18 @@ export function RegistrationForm({ eventId }: Props) {
     if (state?.success) {
       toast.success(state.data?.message || "Inscription réussie !");
       formRef.current?.reset();
+      setTurnstileToken("");
     } else if (state && !state.success) {
       toast.error(state.error);
     }
   }, [state]);
 
+  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+
   return (
     <form ref={formRef} action={formAction} className="space-y-4">
       <input type="hidden" name="eventId" value={eventId} />
+      <input type="hidden" name="turnstileToken" value={turnstileToken} />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
@@ -80,8 +86,20 @@ export function RegistrationForm({ eventId }: Props) {
         />
       </div>
 
+      {/* Turnstile anti-bot */}
+      {siteKey && (
+        <div className="flex justify-center">
+          <Turnstile
+            siteKey={siteKey}
+            onSuccess={setTurnstileToken}
+            onError={() => setTurnstileToken("")}
+            onExpire={() => setTurnstileToken("")}
+          />
+        </div>
+      )}
+
       {state?.success && (
-        <Alert className="border-green-200 bg-green-50 text-green-800">
+        <Alert className="border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-200">
           <CheckCircle2 className="h-4 w-4" />
           <AlertDescription>{state.data?.message}</AlertDescription>
         </Alert>
@@ -94,7 +112,11 @@ export function RegistrationForm({ eventId }: Props) {
         </Alert>
       )}
 
-      <Button type="submit" className="w-full" disabled={isPending}>
+      <Button
+        type="submit"
+        className="w-full"
+        disabled={isPending || (!!siteKey && !turnstileToken)}
+      >
         {isPending ? (
           <>
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
