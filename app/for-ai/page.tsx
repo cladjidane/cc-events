@@ -11,8 +11,11 @@ import {
   ExternalLink,
   Sparkles,
   ArrowRight,
-  Copy,
   Terminal,
+  Bot,
+  Cpu,
+  Package,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -84,6 +87,54 @@ const capabilities = [
   },
 ];
 
+const mcpTools = [
+  {
+    name: "list_events",
+    description: "Lister les événements avec filtres",
+    category: "events",
+  },
+  {
+    name: "get_event",
+    description: "Détails d'un événement",
+    category: "events",
+  },
+  {
+    name: "create_event",
+    description: "Créer un événement",
+    category: "events",
+  },
+  {
+    name: "update_event",
+    description: "Modifier un événement",
+    category: "events",
+  },
+  {
+    name: "delete_event",
+    description: "Supprimer un événement",
+    category: "events",
+  },
+  {
+    name: "list_registrations",
+    description: "Lister les inscriptions",
+    category: "registrations",
+  },
+  {
+    name: "register_attendee",
+    description: "Inscrire un participant",
+    category: "registrations",
+  },
+  {
+    name: "unregister_attendee",
+    description: "Annuler une inscription",
+    category: "registrations",
+  },
+  {
+    name: "send_notification",
+    description: "Envoyer un email",
+    category: "notifications",
+  },
+];
+
 const exampleBriefs = [
   {
     brief: "Crée un meetup IA le 15 mars à 19h au WeWork Paris, max 50 personnes",
@@ -137,7 +188,100 @@ export default function ForAIPage() {
           </p>
         </div>
 
-        {/* Quick Links */}
+        {/* MCP Server - Featured */}
+        <Card className="mb-12 border-2 border-primary/20 bg-gradient-to-br from-primary/5 to-transparent overflow-hidden">
+          <CardHeader>
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-xl bg-primary/10 flex items-center justify-center">
+                  <Bot className="w-7 h-7 text-primary" />
+                </div>
+                <div>
+                  <Badge className="mb-1" variant="default">
+                    <Zap className="w-3 h-3 mr-1" />
+                    Recommandé
+                  </Badge>
+                  <CardTitle className="text-2xl">MCP Server</CardTitle>
+                  <CardDescription className="text-base">
+                    Intégration native avec Claude Desktop
+                  </CardDescription>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Badge variant="outline" className="font-mono">
+                  <Package className="w-3 h-3 mr-1" />
+                  @eventlite/mcp-server
+                </Badge>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <p className="text-muted-foreground">
+              Le serveur MCP (Model Context Protocol) permet à Claude d'interagir directement avec EventLite
+              sans passer par l'API REST. Installation en une commande, configuration simple.
+            </p>
+
+            {/* Installation */}
+            <div>
+              <h4 className="font-medium mb-2 flex items-center gap-2">
+                <Terminal className="w-4 h-4" />
+                Installation
+              </h4>
+              <div className="bg-muted p-3 rounded-lg font-mono text-sm">
+                <code>npx @eventlite/mcp-server</code>
+              </div>
+            </div>
+
+            {/* Configuration */}
+            <div>
+              <h4 className="font-medium mb-2 flex items-center gap-2">
+                <Code className="w-4 h-4" />
+                Configuration Claude Desktop
+              </h4>
+              <div className="bg-muted p-3 rounded-lg font-mono text-xs overflow-x-auto">
+                <pre>{`{
+  "mcpServers": {
+    "eventlite": {
+      "command": "npx",
+      "args": ["@eventlite/mcp-server"],
+      "env": {
+        "EVENTLITE_API_URL": "https://votre-app.vercel.app",
+        "EVENTLITE_API_KEY": "votre-api-key"
+      }
+    }
+  }
+}`}</pre>
+              </div>
+            </div>
+
+            {/* Tools disponibles */}
+            <div>
+              <h4 className="font-medium mb-3 flex items-center gap-2">
+                <Cpu className="w-4 h-4" />
+                9 outils disponibles
+              </h4>
+              <div className="grid gap-2 md:grid-cols-3">
+                {mcpTools.map((tool) => (
+                  <div
+                    key={tool.name}
+                    className="flex items-center gap-2 p-2 rounded-lg bg-background border"
+                  >
+                    <code className="text-xs font-mono text-primary">{tool.name}</code>
+                    <span className="text-xs text-muted-foreground truncate">{tool.description}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* API REST Documentation */}
+        <div className="mb-6">
+          <h2 className="text-xl font-bold mb-2">Documentation API REST</h2>
+          <p className="text-muted-foreground text-sm">
+            Alternative au MCP pour les agents qui préfèrent utiliser l'API HTTP directement.
+          </p>
+        </div>
         <div className="grid gap-4 md:grid-cols-3 mb-12">
           <Card className="border-2 hover:border-primary/50 transition-colors">
             <CardHeader className="pb-3">
