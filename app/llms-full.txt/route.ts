@@ -360,7 +360,11 @@ export async function GET(request: NextRequest) {
 
   // Remplacer les chemins relatifs par des URLs absolues
   const content = llmsFullTxt
+    // URLs dans les backticks inline
     .replace(/`(GET|POST|PATCH|DELETE) \//g, `\`$1 ${baseUrl}/`)
+    // URLs en début de ligne (dans les blocs de code)
+    .replace(/^(GET|POST|PATCH|DELETE) \/api/gm, `$1 ${baseUrl}/api`)
+    // Dernière ligne avec GET /api/v1/openapi
     .replace(/`GET \/api/g, `\`GET ${baseUrl}/api`);
 
   return new Response(content, {
