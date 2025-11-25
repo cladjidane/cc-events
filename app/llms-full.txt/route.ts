@@ -21,24 +21,25 @@ Toutes les requêtes API nécessitent une authentification Bearer Token.
 
 ### Générer une API Key
 
-L'API Key est générée en encodant en base64 : \`email:NEXTAUTH_SECRET\`
+1. Connectez-vous à votre compte EventLite
+2. Allez dans **Paramètres → Clés API**
+3. Créez une nouvelle clé avec un nom descriptif (ex: "MCP Server", "Script CI")
+4. Copiez le token (format: \`evl_xxxxxxxxxxxxx\`)
 
-**JavaScript :**
-\`\`\`javascript
-const apiKey = btoa("admin@eventlite.fr:votre-nextauth-secret");
-\`\`\`
-
-**Bash :**
-\`\`\`bash
-API_KEY=$(echo -n "admin@eventlite.fr:votre-nextauth-secret" | base64)
-\`\`\`
+⚠️ **Important** : Le token complet n'est affiché qu'une seule fois à la création. Copiez-le immédiatement.
 
 ### Utilisation
 
 Inclure dans chaque requête :
 \`\`\`
-Authorization: Bearer <API_KEY>
+Authorization: Bearer evl_xxxxxxxxxxxxx
 \`\`\`
+
+### Gestion des clés
+
+- Maximum 5 clés par utilisateur
+- Chaque clé peut être révoquée individuellement
+- L'utilisation de chaque clé est tracée (dernière utilisation)
 
 ---
 

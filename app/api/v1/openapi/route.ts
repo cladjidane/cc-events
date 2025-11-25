@@ -12,15 +12,14 @@ API REST pour la gestion d'événements EventLite.
 Toutes les requêtes doivent inclure un header Authorization avec une API Key:
 
 \`\`\`
-Authorization: Bearer <API_KEY>
+Authorization: Bearer evl_xxxxxxxxxxxxx
 \`\`\`
 
-L'API Key est générée en encodant en base64: \`email:NEXTAUTH_SECRET\`
-
-Exemple en JavaScript:
-\`\`\`javascript
-const apiKey = btoa(\`admin@eventlite.fr:\${process.env.NEXTAUTH_SECRET}\`);
-\`\`\`
+**Générer une API Key:**
+1. Connectez-vous à votre compte EventLite
+2. Allez dans **Paramètres → Clés API**
+3. Créez une nouvelle clé
+4. Copiez le token (affiché une seule fois)
 
 ## Workflow typique pour créer un événement
 
@@ -54,7 +53,7 @@ Toutes les dates sont en ISO 8601: \`2025-01-15T14:00:00.000Z\`
       bearerAuth: {
         type: "http",
         scheme: "bearer",
-        description: "API Key encodée en base64 (format: email:NEXTAUTH_SECRET)",
+        description: "API Key générée depuis Paramètres → Clés API (format: evl_xxx)",
       },
     },
     schemas: {

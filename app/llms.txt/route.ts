@@ -19,7 +19,9 @@ const llmsTxt = `# EventLite
 
 ## Authentification
 
-API Key au format Bearer Token. Générer avec : \`base64(email:NEXTAUTH_SECRET)\`
+API Key au format Bearer Token. Générer depuis le dashboard : **Paramètres → Clés API**
+
+Format : \`Authorization: Bearer evl_xxxxxxxxxxxxx\`
 `;
 
 /**
