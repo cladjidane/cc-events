@@ -12,6 +12,20 @@ export const loginSchema = z.object({
 
 export type LoginInput = z.infer<typeof loginSchema>;
 
+export const registerSchema = z.object({
+  name: z
+    .string()
+    .min(2, "Le nom doit contenir au moins 2 caractères")
+    .max(100, "Le nom ne peut pas dépasser 100 caractères"),
+  email: z.string().email("Email invalide"),
+  password: z
+    .string()
+    .min(8, "Le mot de passe doit contenir au moins 8 caractères")
+    .max(100, "Le mot de passe ne peut pas dépasser 100 caractères"),
+});
+
+export type RegisterInput = z.infer<typeof registerSchema>;
+
 // ============================================
 // REGISTRATION
 // ============================================

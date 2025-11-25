@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { LoginForm } from "@/components/forms/login-form";
+import { RegisterForm } from "@/components/forms/register-form";
 import {
   Card,
   CardContent,
@@ -10,10 +10,10 @@ import {
 } from "@/components/ui/card";
 
 export const metadata: Metadata = {
-  title: "Connexion",
+  title: "Créer un compte",
 };
 
-export default function LoginPage() {
+export default function RegisterPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/50 px-4">
       <Card className="w-full max-w-md">
@@ -21,17 +21,17 @@ export default function LoginPage() {
           <Link href="/" className="mb-4 inline-block text-2xl font-bold">
             EventLite
           </Link>
-          <CardTitle>Connexion</CardTitle>
+          <CardTitle>Créer un compte</CardTitle>
           <CardDescription>
-            Connectez-vous pour accéder au tableau de bord
+            Inscrivez-vous pour créer et gérer vos événements
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <LoginForm />
+          <RegisterForm />
           <p className="mt-4 text-center text-sm text-muted-foreground">
-            Pas encore de compte ?{" "}
-            <Link href="/register" className="text-primary hover:underline">
-              Créer un compte
+            Déjà un compte ?{" "}
+            <Link href="/login" className="text-primary hover:underline">
+              Se connecter
             </Link>
           </p>
         </CardContent>
