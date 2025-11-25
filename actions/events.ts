@@ -33,10 +33,13 @@ export async function createEvent(
     const startAtDate = startAtValue ? new Date(startAtValue as string) : new Date();
     const endAtDate = new Date(startAtDate.getTime() + 2 * 60 * 60 * 1000);
 
+    const coverImageValue = formData.get("coverImage");
+
     const rawData = {
       title: formData.get("title"),
       subtitle: formData.get("subtitle") || undefined,
       description: formData.get("description") || undefined,
+      coverImage: coverImageValue && coverImageValue !== "" ? coverImageValue : null,
       mode: formData.get("mode"),
       location: formData.get("location") || undefined,
       latitude: latitudeStr && latitudeStr !== "" ? Number(latitudeStr) : null,
@@ -115,10 +118,13 @@ export async function updateEvent(
     const startAtDate = startAtValue ? new Date(startAtValue as string) : new Date();
     const endAtDate = new Date(startAtDate.getTime() + 2 * 60 * 60 * 1000);
 
+    const coverImageValue = formData.get("coverImage");
+
     const rawData = {
       title: formData.get("title"),
       subtitle: formData.get("subtitle") || undefined,
       description: formData.get("description") || undefined,
+      coverImage: coverImageValue && coverImageValue !== "" ? coverImageValue : null,
       mode: formData.get("mode"),
       location: formData.get("location") || undefined,
       latitude: latitudeStr && latitudeStr !== "" ? Number(latitudeStr) : null,

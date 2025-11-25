@@ -18,6 +18,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { LocationPicker } from "@/components/map";
+import { ImageUpload } from "@/components/image-upload";
 import type { Event } from "@prisma/client";
 import type { ActionResult } from "@/lib/utils";
 
@@ -30,6 +31,7 @@ export function EventForm({ event }: Props) {
   const isEditing = !!event;
 
   const [mode, setMode] = useState<string>(event?.mode || "IN_PERSON");
+  const [coverImage, setCoverImage] = useState<string | null>(event?.coverImage || null);
   const [location, setLocation] = useState({
     location: event?.location || "",
     latitude: event?.latitude || undefined,
@@ -95,6 +97,16 @@ export function EventForm({ event }: Props) {
             rows={6}
             disabled={isPending}
           />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Image de couverture</Label>
+          <ImageUpload
+            value={coverImage}
+            onChange={setCoverImage}
+            disabled={isPending}
+          />
+          <input type="hidden" name="coverImage" value={coverImage || ""} />
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">

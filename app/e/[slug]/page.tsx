@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Calendar, MapPin, Users, Globe, ArrowLeft, Clock, AlertCircle, Ticket } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -37,11 +38,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       url: eventUrl,
       type: "website",
+      ...(event.coverImage && {
+        images: [{ url: event.coverImage, width: 1200, height: 630, alt: event.title }],
+      }),
     },
     twitter: {
       card: "summary_large_image",
       title: event.title,
       description,
+      ...(event.coverImage && { images: [event.coverImage] }),
     },
     alternates: {
       canonical: eventUrl,
@@ -86,6 +91,7 @@ function EventJsonLd({ event }: { event: NonNullable<Awaited<ReturnType<typeof g
       name: event.organizer.name || "Organisateur EventLite",
     },
     url: eventUrl,
+    ...(event.coverImage && { image: event.coverImage }),
     ...(event.capacity && {
       maximumAttendeeCapacity: event.capacity,
     }),
@@ -145,6 +151,20 @@ export default async function EventPage({ params }: Props) {
           <ArrowLeft className="mr-2 h-4 w-4 group-hover:-translate-x-1 transition-transform" />
           Retour aux événements
         </Link>
+
+        {/* Cover Image */}
+        {event.coverImage && (
+          <div className="relative aspect-[21/9] w-full overflow-hidden rounded-xl mb-8 border-2 border-border">
+            <Image
+              src={event.coverImage}
+              alt={event.title}
+              fill
+              className="object-cover"
+              sizes="(max-width: 1024px) 100vw, 1200px"
+              priority
+            />
+          </div>
+        )}
 
         <div className="grid gap-8 lg:grid-cols-5">
           {/* Event Details */}

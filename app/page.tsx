@@ -1,6 +1,7 @@
 export const dynamic = "force-dynamic";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Calendar, MapPin, Users, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -154,31 +155,41 @@ export default async function HomePage() {
           </div>
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {events.map((event, index) => (
+            {events.map((event) => (
               <Link key={event.id} href={`/e/${event.slug}`} className="group">
-                <Card className="card-3d h-full flex flex-col overflow-hidden border-2 border-border hover:border-primary/40 transition-colors bg-card">
-                  {/* Card accent bar - emerald gradient */}
-                  <div
-                    className="h-1.5 bg-gradient-to-r from-primary via-emerald-500 to-accent"
-                    style={{
-                      animationDelay: `${index * 100}ms`
-                    }}
-                  />
-
-                  <CardHeader className="pb-3">
-                    <div className="mb-3 flex items-center gap-2 flex-wrap">
+                <Card className="card-3d h-full flex flex-col overflow-hidden border-2 border-border hover:border-primary/40 transition-all bg-card hover:shadow-lg">
+                  {/* Cover image or gradient placeholder */}
+                  <div className="relative aspect-[16/9] overflow-hidden bg-gradient-to-br from-primary/20 via-emerald-500/10 to-accent/20">
+                    {event.coverImage ? (
+                      <Image
+                        src={event.coverImage}
+                        alt={event.title}
+                        fill
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <IsoCalendar className="w-16 h-16 opacity-30" />
+                      </div>
+                    )}
+                    {/* Badges overlay */}
+                    <div className="absolute top-3 left-3 flex items-center gap-2 flex-wrap">
                       <Badge
-                        variant={event.mode === "ONLINE" ? "secondary" : "outline"}
-                        className="badge-float"
+                        variant={event.mode === "ONLINE" ? "secondary" : "default"}
+                        className="backdrop-blur-sm bg-background/80 shadow-sm"
                       >
                         {event.mode === "ONLINE" ? "En ligne" : "Présentiel"}
                       </Badge>
                       {event.capacity && (
-                        <Badge variant="outline" className="badge-float">
+                        <Badge variant="secondary" className="backdrop-blur-sm bg-background/80 shadow-sm">
                           {event._count.registrations}/{event.capacity}
                         </Badge>
                       )}
                     </div>
+                  </div>
+
+                  <CardHeader className="pb-3">
                     <CardTitle className="line-clamp-2 group-hover:text-primary transition-colors">
                       {event.title}
                     </CardTitle>
@@ -190,25 +201,19 @@ export default async function HomePage() {
                   </CardHeader>
 
                   <CardContent className="flex-1 pb-4">
-                    <div className="space-y-3 text-sm">
+                    <div className="space-y-2.5 text-sm">
                       <div className="flex items-center gap-3 text-muted-foreground">
-                        <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-primary/5 flex items-center justify-center">
-                          <Calendar className="h-4 w-4 text-primary" />
-                        </div>
+                        <Calendar className="h-4 w-4 text-primary flex-shrink-0" />
                         <span className="font-medium">{formatDate(event.startAt)}</span>
                       </div>
                       {event.location && (
                         <div className="flex items-center gap-3 text-muted-foreground">
-                          <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-primary/5 flex items-center justify-center">
-                            <MapPin className="h-4 w-4 text-primary" />
-                          </div>
+                          <MapPin className="h-4 w-4 text-primary flex-shrink-0" />
                           <span className="line-clamp-1">{event.location}</span>
                         </div>
                       )}
                       <div className="flex items-center gap-3 text-muted-foreground">
-                        <div className="flex-shrink-0 w-8 h-8 rounded-lg bg-primary/5 flex items-center justify-center">
-                          <Users className="h-4 w-4 text-primary" />
-                        </div>
+                        <Users className="h-4 w-4 text-primary flex-shrink-0" />
                         <span>
                           {event._count.registrations} inscrit
                           {event._count.registrations > 1 ? "s" : ""}

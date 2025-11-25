@@ -57,6 +57,7 @@ export const eventSchema = z.object({
     .max(100, "Le titre ne peut pas dépasser 100 caractères"),
   subtitle: z.string().max(200, "Le sous-titre ne peut pas dépasser 200 caractères").optional().nullable(),
   description: z.string().max(5000, "La description ne peut pas dépasser 5000 caractères").optional().nullable(),
+  coverImage: z.string().url().optional().nullable(),
   mode: z.nativeEnum(EventMode),
   location: z.string().max(500, "L'adresse ne peut pas dépasser 500 caractères").optional().nullable(),
   latitude: z.coerce.number().min(-90).max(90).optional().nullable(),
