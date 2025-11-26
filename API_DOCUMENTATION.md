@@ -95,6 +95,9 @@ GET /api/v1/events
 | Param | Type | Default | Description |
 |-------|------|---------|-------------|
 | status | string | - | Filtrer: `DRAFT`, `PUBLISHED`, `CLOSED`, `CANCELLED` |
+| search | string | - | Recherche dans le titre et la description |
+| city | string | - | Filtrer par ville (dans le champ location) |
+| upcoming | boolean | false | `true` pour les événements futurs uniquement (triés par date) |
 | limit | integer | 50 | Max résultats (max: 100) |
 | offset | integer | 0 | Pour pagination |
 
@@ -931,28 +934,29 @@ EventLite dispose d'un serveur MCP pour une intégration native avec Claude Desk
 
 ### Installation
 
-Ajoutez à votre `claude_desktop_config.json`:
+Téléchargez le binaire depuis [GitHub Releases](https://github.com/cladjidane/eventlite-mcp-server/releases) et ajoutez à votre `claude_desktop_config.json`:
 
 ```json
 {
   "mcpServers": {
     "eventlite": {
-      "command": "npx",
-      "args": ["@eventlite/mcp-server"],
+      "command": "/chemin/vers/eventlite-mcp-darwin-arm64",
       "env": {
-        "EVENTLITE_API_URL": "https://your-app.vercel.app",
-        "EVENTLITE_API_KEY": "votre-api-key"
+        "EVENTLITE_API_URL": "https://eventlite.context-collective.org",
+        "EVENTLITE_API_KEY": "evl_xxxxxxxxxxxxx"
       }
     }
   }
 }
 ```
 
+> macOS : Exécutez `xattr -d com.apple.quarantine <binaire>` après le téléchargement.
+
 ### Tools disponibles
 
 | Tool | Description |
 |------|-------------|
-| `list_events` | Lister les événements |
+| `list_events` | Lister et rechercher des événements (search, city, upcoming) |
 | `get_event` | Détails d'un événement |
 | `create_event` | Créer un événement |
 | `update_event` | Modifier un événement |
@@ -961,6 +965,7 @@ Ajoutez à votre `claude_desktop_config.json`:
 | `register_attendee` | Inscrire quelqu'un |
 | `unregister_attendee` | Désinscrire quelqu'un |
 | `send_notification` | Envoyer un email |
+| `upload_image` | Uploader une image (URL ou base64) |
 
 ### Exemple d'utilisation
 

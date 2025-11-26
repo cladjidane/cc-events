@@ -105,7 +105,7 @@ curl -H "Authorization: Bearer $API_KEY" \
 
 | Catégorie | Endpoint | Description |
 |-----------|----------|-------------|
-| **Events** | `GET /api/v1/events` | Liste des événements |
+| **Events** | `GET /api/v1/events` | Liste des événements (search, city, upcoming) |
 | | `POST /api/v1/events` | Créer un événement |
 | | `GET /api/v1/events/{id}` | Détail d'un événement |
 | | `PATCH /api/v1/events/{id}` | Modifier |
@@ -127,39 +127,34 @@ Voir [API_DOCUMENTATION.md](./API_DOCUMENTATION.md) pour la documentation détai
 
 ## MCP Server (Claude)
 
-EventLite inclut un serveur MCP pour intégration avec Claude Desktop.
+EventLite dispose d'un serveur MCP standalone pour intégration avec Claude Desktop.
 
 ### Installation
+
+Téléchargez le binaire depuis [GitHub Releases](https://github.com/cladjidane/eventlite-mcp-server/releases) et configurez Claude Desktop :
 
 ```json
 // claude_desktop_config.json
 {
   "mcpServers": {
     "eventlite": {
-      "command": "node",
-      "args": ["/chemin/vers/cc-events/packages/mcp-server/dist/index.js"],
+      "command": "/chemin/vers/eventlite-mcp-darwin-arm64",
       "env": {
-        "EVENTLITE_API_URL": "http://localhost:3333",
-        "EVENTLITE_API_KEY": "votre-api-key"
+        "EVENTLITE_API_URL": "https://eventlite.context-collective.org",
+        "EVENTLITE_API_KEY": "evl_xxxxxxxxxxxxx"
       }
     }
   }
 }
 ```
 
-### Build du MCP Server
-
-```bash
-cd packages/mcp-server
-pnpm install
-pnpm build
-```
+> **macOS** : Exécutez `xattr -d com.apple.quarantine <binaire>` après le téléchargement.
 
 ### Tools disponibles
 
 | Tool | Description |
 |------|-------------|
-| `list_events` | Lister les événements |
+| `list_events` | Lister et rechercher des événements (search, city, upcoming) |
 | `get_event` | Détails d'un événement |
 | `create_event` | Créer un événement |
 | `update_event` | Modifier un événement |
@@ -168,18 +163,18 @@ pnpm build
 | `register_attendee` | Inscrire quelqu'un |
 | `unregister_attendee` | Désinscrire |
 | `send_notification` | Envoyer un email |
+| `upload_image` | Uploader une image (URL ou base64) |
 
 ### Exemple d'utilisation
 
 ```
-User: "Crée un meetup IA pour vendredi prochain à 19h"
-Claude: ✅ Événement créé : Meetup IA
-        Slug: meetup-ia
-        Status: DRAFT
+User: "Quels sont mes événements à Paris ?"
+Claude: Tu as 2 événements à Paris :
+        - Meetup IA (mardi 19h) - 23/30 places
+        - Workshop React (jeudi 14h) - 15 inscrits
 
-User: "Publie-le et inscris alice@example.com"
-Claude: ✅ Événement publié
-        ✅ Alice inscrite avec le statut CONFIRMED
+User: "Inscris alice@example.com au Meetup IA"
+Claude: ✅ Alice inscrite avec le statut CONFIRMED
 ```
 
 ## Webhooks
@@ -244,8 +239,7 @@ cc-events/
 ├── actions/                 # Server Actions
 ├── emails/                  # Templates React Email
 ├── prisma/                  # Schema & migrations
-├── packages/
-│   └── mcp-server/         # MCP Server pour Claude
+├── packages/               # Sous-packages (historique)
 └── API_DOCUMENTATION.md    # Doc API complète
 ```
 

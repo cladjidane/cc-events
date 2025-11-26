@@ -3,6 +3,11 @@ import { db } from "@/lib/db";
 import { verifyApiKey, jsonResponse, errorResponse } from "@/lib/api-auth";
 import { RegistrationStatus, EventStatus } from "@prisma/client";
 import { z } from "zod";
+import { sendEmail } from "@/lib/email";
+import { ConfirmationEmail } from "@/emails/confirmation";
+import { NewRegistrationOrganizerEmail } from "@/emails/new-registration-organizer";
+import { formatDateRange } from "@/lib/utils";
+import { triggerWebhooks } from "@/lib/webhooks";
 
 type Params = {
   params: Promise<{ id: string }>;
@@ -143,10 +148,13 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     // Transaction pour gérer la concurrence
     const result = await db.$transaction(async (tx) => {
-      // Récupérer l'événement avec compte des confirmés
+      // Récupérer l'événement avec compte des confirmés et infos organisateur
       const event = await tx.event.findUnique({
         where: { id: eventCheck.id },
         include: {
+          organizer: {
+            select: { id: true, email: true, name: true },
+          },
           _count: {
             select: {
               registrations: {
@@ -252,6 +260,65 @@ export async function POST(request: NextRequest, { params }: Params) {
         slug: result.event.slug,
       },
     };
+
+    // Envoyer les emails (async, ne bloque pas la réponse)
+    const appUrl = process.env.APP_URL || "http://localhost:3000";
+
+    // Email de confirmation au participant
+    sendEmail({
+      to: result.registration.email,
+      subject: result.registration.status === RegistrationStatus.WAITLIST
+        ? `Liste d'attente - ${result.event.title}`
+        : `Inscription confirmée - ${result.event.title}`,
+      react: ConfirmationEmail({
+        firstName: result.registration.firstName,
+        eventTitle: result.event.title,
+        eventDate: formatDateRange(result.event.startAt, result.event.endAt),
+        eventLocation: result.event.location || undefined,
+        isOnline: result.event.mode === "ONLINE",
+        cancelUrl: `${appUrl}/cancel/${result.registration.cancelToken}`,
+        eventUrl: `${appUrl}/e/${result.event.slug}`,
+        isWaitlist: result.registration.status === RegistrationStatus.WAITLIST,
+      }),
+    }).catch((err) => console.error("Erreur envoi email participant:", err));
+
+    // Email de notification à l'organisateur
+    const confirmedCount = result.event._count.registrations +
+      (result.registration.status === RegistrationStatus.CONFIRMED ? 1 : 0);
+    const waitlistCount = result.registration.status === RegistrationStatus.WAITLIST ? 1 : 0;
+
+    sendEmail({
+      to: result.event.organizer.email,
+      subject: `Nouvelle inscription - ${result.event.title}`,
+      react: NewRegistrationOrganizerEmail({
+        organizerName: result.event.organizer.name || "Organisateur",
+        participantName: `${result.registration.firstName} ${result.registration.lastName}`,
+        participantEmail: result.registration.email,
+        eventTitle: result.event.title,
+        eventDate: formatDateRange(result.event.startAt, result.event.endAt),
+        registrationStatus: result.registration.status as "CONFIRMED" | "WAITLIST",
+        confirmedCount,
+        capacity: result.event.capacity,
+        waitlistCount,
+        dashboardUrl: `${appUrl}/dashboard/events/${result.event.id}/registrations`,
+        notes: result.registration.notes || undefined,
+      }),
+    }).catch((err) => console.error("Erreur envoi email organisateur:", err));
+
+    // Déclencher les webhooks
+    triggerWebhooks(result.event.organizer.id, "registration.created", {
+      registration: {
+        id: result.registration.id,
+        email: result.registration.email,
+        name: `${result.registration.firstName} ${result.registration.lastName}`,
+        status: result.registration.status,
+      },
+      event: {
+        id: result.event.id,
+        title: result.event.title,
+        slug: result.event.slug,
+      },
+    }).catch((err) => console.error("Erreur webhook:", err));
 
     return jsonResponse({ data: response }, 201);
   } catch (error) {

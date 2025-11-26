@@ -3,6 +3,12 @@ import { db } from "@/lib/db";
 import { verifyApiKey, jsonResponse, errorResponse } from "@/lib/api-auth";
 import { RegistrationStatus } from "@prisma/client";
 import { z } from "zod";
+import { sendEmail } from "@/lib/email";
+import { WaitlistPromotedEmail } from "@/emails/waitlist-promoted";
+import { CancellationConfirmationEmail } from "@/emails/cancellation-confirmation";
+import { CancellationOrganizerEmail } from "@/emails/cancellation-organizer";
+import { formatDateRange } from "@/lib/utils";
+import { triggerWebhooks } from "@/lib/webhooks";
 
 type Params = {
   params: Promise<{ id: string; email: string }>;
@@ -97,8 +103,16 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   const { id, email } = await params;
   const decodedEmail = decodeURIComponent(email);
 
-  // Vérifier l'événement
-  const event = await findEventWithAccess(id, user.id, user.role);
+  // Vérifier l'événement avec infos organisateur
+  const event = await db.event.findFirst({
+    where: {
+      OR: [{ id }, { slug: id }],
+      ...(user.role !== "ADMIN" && { organizerId: user.id }),
+    },
+    include: {
+      organizer: { select: { id: true, email: true, name: true } },
+    },
+  });
   if (!event) {
     return errorResponse("Event not found", 404);
   }
@@ -156,7 +170,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
         existingRegistration.status === RegistrationStatus.CONFIRMED &&
         status !== RegistrationStatus.CONFIRMED
       ) {
-        await promoteFromWaitlist(event.id);
+        await promoteFromWaitlist(event.id, event);
       }
 
       // Si on passe à CONFIRMED, vérifier la capacité
@@ -223,8 +237,21 @@ export async function DELETE(request: NextRequest, { params }: Params) {
   const { id, email } = await params;
   const decodedEmail = decodeURIComponent(email);
 
-  // Vérifier l'événement
-  const event = await findEventWithAccess(id, user.id, user.role);
+  // Vérifier l'événement avec infos organisateur
+  const event = await db.event.findFirst({
+    where: {
+      OR: [{ id }, { slug: id }],
+      ...(user.role !== "ADMIN" && { organizerId: user.id }),
+    },
+    include: {
+      organizer: { select: { id: true, email: true, name: true } },
+      registrations: {
+        where: { status: { not: RegistrationStatus.CANCELLED } },
+        select: { status: true },
+      },
+    },
+  });
+
   if (!event) {
     return errorResponse("Event not found", 404);
   }
@@ -258,8 +285,69 @@ export async function DELETE(request: NextRequest, { params }: Params) {
   // Promouvoir le premier en waitlist si l'inscription était confirmée
   let promoted = null;
   if (wasConfirmed) {
-    promoted = await promoteFromWaitlist(event.id);
+    promoted = await promoteFromWaitlist(event.id, event);
   }
+
+  // Envoyer les emails (async)
+  const appUrl = process.env.APP_URL || "http://localhost:3000";
+
+  // Calculer les counts après annulation
+  const confirmedCount = event.registrations.filter(
+    (r) => r.status === RegistrationStatus.CONFIRMED
+  ).length - (wasConfirmed ? 1 : 0) + (promoted ? 1 : 0);
+  const waitlistCount = event.registrations.filter(
+    (r) => r.status === RegistrationStatus.WAITLIST
+  ).length - (registration.status === RegistrationStatus.WAITLIST ? 1 : 0) - (promoted ? 1 : 0);
+
+  // Email de confirmation d'annulation au participant
+  sendEmail({
+    to: registration.email,
+    subject: `Inscription annulée - ${event.title}`,
+    react: CancellationConfirmationEmail({
+      firstName: registration.firstName,
+      eventTitle: event.title,
+      eventDate: formatDateRange(event.startAt, event.endAt),
+      eventUrl: `${appUrl}/e/${event.slug}`,
+    }),
+  }).catch((err) => console.error("Erreur envoi email annulation participant:", err));
+
+  // Email à l'organisateur
+  sendEmail({
+    to: event.organizer.email,
+    subject: `Annulation - ${event.title}`,
+    react: CancellationOrganizerEmail({
+      organizerName: event.organizer.name || "Organisateur",
+      participantName: `${registration.firstName} ${registration.lastName}`,
+      participantEmail: registration.email,
+      eventTitle: event.title,
+      eventDate: formatDateRange(event.startAt, event.endAt),
+      confirmedCount,
+      capacity: event.capacity,
+      waitlistCount,
+      promotedParticipant: promoted
+        ? {
+            name: `${promoted.firstName} ${promoted.lastName}`,
+            email: promoted.email,
+          }
+        : undefined,
+      dashboardUrl: `${appUrl}/dashboard/events/${event.id}/registrations`,
+    }),
+  }).catch((err) => console.error("Erreur envoi email annulation organisateur:", err));
+
+  // Déclencher webhook d'annulation
+  triggerWebhooks(event.organizer.id, "registration.cancelled", {
+    registration: {
+      id: registration.id,
+      email: registration.email,
+      name: `${registration.firstName} ${registration.lastName}`,
+      status: "CANCELLED",
+    },
+    event: {
+      id: event.id,
+      title: event.title,
+      slug: event.slug,
+    },
+  }).catch((err) => console.error("Erreur webhook:", err));
 
   return jsonResponse({
     data: {
@@ -277,7 +365,16 @@ export async function DELETE(request: NextRequest, { params }: Params) {
 /**
  * Promouvoir le premier inscrit en liste d'attente
  */
-async function promoteFromWaitlist(eventId: string) {
+async function promoteFromWaitlist(eventId: string, event: {
+  id: string;
+  title: string;
+  slug: string;
+  startAt: Date;
+  endAt: Date;
+  location: string | null;
+  mode: string;
+  organizer: { id: string; email: string; name: string | null };
+}) {
   const nextInWaitlist = await db.registration.findFirst({
     where: {
       eventId,
@@ -292,7 +389,38 @@ async function promoteFromWaitlist(eventId: string) {
       data: { status: RegistrationStatus.CONFIRMED },
     });
 
-    // TODO: Envoyer email de promotion au participant promu
+    // Envoyer email de promotion au participant promu
+    const appUrl = process.env.APP_URL || "http://localhost:3000";
+
+    sendEmail({
+      to: nextInWaitlist.email,
+      subject: `Bonne nouvelle ! Place confirmée - ${event.title}`,
+      react: WaitlistPromotedEmail({
+        firstName: nextInWaitlist.firstName,
+        eventTitle: event.title,
+        eventDate: formatDateRange(event.startAt, event.endAt),
+        eventLocation: event.location || undefined,
+        isOnline: event.mode === "ONLINE",
+        eventUrl: `${appUrl}/e/${event.slug}`,
+        cancelUrl: `${appUrl}/cancel/${nextInWaitlist.cancelToken}`,
+      }),
+    }).catch((err) => console.error("Erreur envoi email promotion:", err));
+
+    // Déclencher webhook de promotion
+    triggerWebhooks(event.organizer.id, "registration.promoted", {
+      registration: {
+        id: nextInWaitlist.id,
+        email: nextInWaitlist.email,
+        name: `${nextInWaitlist.firstName} ${nextInWaitlist.lastName}`,
+        status: "CONFIRMED",
+        previous_status: "WAITLIST",
+      },
+      event: {
+        id: event.id,
+        title: event.title,
+        slug: event.slug,
+      },
+    }).catch((err) => console.error("Erreur webhook:", err));
 
     return nextInWaitlist;
   }

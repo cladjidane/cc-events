@@ -9,7 +9,12 @@ import { EventStatus } from "@prisma/client";
 /**
  * GET /api/v1/events
  * Liste tous les événements de l'utilisateur authentifié
- * Query params: status (DRAFT|PUBLISHED|CLOSED|CANCELLED), limit, offset
+ * Query params:
+ *   - status: DRAFT|PUBLISHED|CLOSED|CANCELLED
+ *   - search: recherche dans titre/description
+ *   - city: filtrer par ville (dans le champ location)
+ *   - upcoming: true pour les événements futurs uniquement
+ *   - limit, offset: pagination
  */
 export async function GET(request: NextRequest) {
   const user = await verifyApiKey(request);
@@ -19,12 +24,23 @@ export async function GET(request: NextRequest) {
 
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status") as EventStatus | null;
+  const search = searchParams.get("search");
+  const city = searchParams.get("city");
+  const upcoming = searchParams.get("upcoming") === "true";
   const limit = Math.min(parseInt(searchParams.get("limit") || "50"), 100);
   const offset = parseInt(searchParams.get("offset") || "0");
 
   const where = {
     ...(user.role !== "ADMIN" && { organizerId: user.id }),
     ...(status && { status }),
+    ...(upcoming && { startAt: { gte: new Date() } }),
+    ...(city && { location: { contains: city, mode: "insensitive" as const } }),
+    ...(search && {
+      OR: [
+        { title: { contains: search, mode: "insensitive" as const } },
+        { description: { contains: search, mode: "insensitive" as const } },
+      ],
+    }),
   };
 
   const [events, total] = await Promise.all([
@@ -32,7 +48,7 @@ export async function GET(request: NextRequest) {
       where,
       take: limit,
       skip: offset,
-      orderBy: { createdAt: "desc" },
+      orderBy: upcoming ? { startAt: "asc" } : { createdAt: "desc" },
       include: {
         _count: {
           select: {
