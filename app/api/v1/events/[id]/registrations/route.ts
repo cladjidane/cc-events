@@ -262,7 +262,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     };
 
     // Envoyer les emails (async, ne bloque pas la réponse)
-    const appUrl = process.env.APP_URL || "http://localhost:3000";
+    const appUrl = process.env.APP_URL || "https://eventlite.context-collective.org";
 
     // Email de confirmation au participant
     sendEmail({

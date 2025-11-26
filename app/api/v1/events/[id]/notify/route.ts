@@ -89,7 +89,7 @@ export async function POST(request: NextRequest, { params }: Params) {
 
     // Mode preview : retourner un aperçu sans envoyer
     if (isPreview) {
-      const appUrl = process.env.APP_URL || "http://localhost:3000";
+      const appUrl = process.env.APP_URL || "https://eventlite.context-collective.org";
       const sampleRecipient = registrations[0];
 
       return jsonResponse({
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     }
 
     // Envoyer les emails
-    const appUrl = process.env.APP_URL || "http://localhost:3000";
+    const appUrl = process.env.APP_URL || "https://eventlite.context-collective.org";
     const results: { email: string; status: "sent" | "failed"; error?: string }[] = [];
 
     // Envoi séquentiel pour éviter de surcharger le serveur SMTP

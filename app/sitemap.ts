@@ -1,7 +1,7 @@
 import { MetadataRoute } from "next";
 import { db } from "@/lib/db";
 
-const siteUrl = process.env.APP_URL || "https://eventlite.app";
+const siteUrl = process.env.APP_URL || "https://eventlite.context-collective.org";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // Static pages

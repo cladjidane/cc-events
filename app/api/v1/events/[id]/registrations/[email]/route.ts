@@ -289,7 +289,7 @@ export async function DELETE(request: NextRequest, { params }: Params) {
   }
 
   // Envoyer les emails (async)
-  const appUrl = process.env.APP_URL || "http://localhost:3000";
+  const appUrl = process.env.APP_URL || "https://eventlite.context-collective.org";
 
   // Calculer les counts après annulation
   const confirmedCount = event.registrations.filter(
@@ -390,7 +390,7 @@ async function promoteFromWaitlist(eventId: string, event: {
     });
 
     // Envoyer email de promotion au participant promu
-    const appUrl = process.env.APP_URL || "http://localhost:3000";
+    const appUrl = process.env.APP_URL || "https://eventlite.context-collective.org";
 
     sendEmail({
       to: nextInWaitlist.email,

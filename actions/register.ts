@@ -210,7 +210,7 @@ export async function registerForEvent(
     revalidatePath(`/e/[slug]`, "page");
 
     // 7. Envoyer email de confirmation (async, ne bloque pas la réponse)
-    const appUrl = process.env.APP_URL || "http://localhost:3000";
+    const appUrl = process.env.APP_URL || "https://eventlite.context-collective.org";
 
     sendEmail({
       to: email,
@@ -280,7 +280,7 @@ export async function registerForEvent(
 export async function cancelRegistration(
   cancelToken: string
 ): Promise<ActionResult> {
-  const appUrl = process.env.APP_URL || "http://localhost:3000";
+  const appUrl = process.env.APP_URL || "https://eventlite.context-collective.org";
 
   try {
     const registration = await db.registration.findUnique({
