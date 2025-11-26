@@ -10,6 +10,7 @@ import { getEventBySlug } from "@/actions/events";
 import { formatDateRange } from "@/lib/utils";
 import { RegistrationForm } from "@/components/forms/registration-form";
 import { EventMap } from "@/components/map";
+import { Markdown } from "@/components/markdown";
 import { IsoLogo, IsoTicket } from "@/components/illustrations/isometric-shapes";
 import type { Metadata } from "next";
 
@@ -245,9 +246,9 @@ export default async function EventPage({ params }: Props) {
             <Separator className="my-6" />
 
             {event.description && (
-              <div className="prose prose-neutral max-w-none dark:prose-invert">
+              <div>
                 <h2 className="text-xl font-semibold mb-4">À propos</h2>
-                <div className="whitespace-pre-wrap">{event.description}</div>
+                <Markdown content={event.description} />
               </div>
             )}
 

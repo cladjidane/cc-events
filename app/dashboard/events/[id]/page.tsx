@@ -17,6 +17,7 @@ import { EventForm } from "@/components/forms/event-form";
 import { DeleteEventButton } from "@/components/delete-event-button";
 import { RegenerateBriefButton } from "@/components/regenerate-brief-button";
 import { formatDateRange } from "@/lib/utils";
+import { Markdown } from "@/components/markdown";
 import type { Metadata } from "next";
 
 type Props = {
@@ -144,9 +145,7 @@ export default async function EventDetailPage({ params, searchParams }: Props) {
                     <h4 className="mb-2 text-sm font-medium text-muted-foreground">
                       Description
                     </h4>
-                    <div className="whitespace-pre-wrap text-sm">
-                      {event.description}
-                    </div>
+                    <Markdown content={event.description} className="text-sm" />
                   </div>
                 </>
               )}
