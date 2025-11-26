@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import { render } from "@react-email/components";
+import { Resend } from "resend";
 
 // Configuration SMTP (prioritaire)
 const smtpConfig = {
@@ -18,6 +19,10 @@ const transporter =
     ? nodemailer.createTransport(smtpConfig)
     : null;
 
+// Resend (fallback si SMTP absent mais RESEND_API_KEY présent)
+const resendApiKey = process.env.RESEND_API_KEY;
+const resend = resendApiKey ? new Resend(resendApiKey) : null;
+
 // Email expéditeur
 const fromEmail = process.env.SMTP_FROM || "contact@context-collective.org";
 const fromName = process.env.SMTP_FROM_NAME || "EventLite";
@@ -31,27 +36,55 @@ export async function sendEmail({
   subject: string;
   react: React.ReactElement;
 }) {
-  // Si pas de transporter SMTP configuré, logger et retourner
-  if (!transporter) {
-    console.log(`[EMAIL MOCK] To: ${to}, Subject: ${subject}`);
-    console.log("[EMAIL] SMTP not configured. Set SMTP_HOST, SMTP_USER, SMTP_PASSWORD");
-    return { success: true, data: { id: "mock" } };
+  // Aucun transport configuré → bloquant (sauf en test pour ne pas casser les suites)
+  if (!transporter && !resend) {
+    const message =
+      "Email transport not configured. Set SMTP_HOST/SMTP_USER/SMTP_PASSWORD (or RESEND_API_KEY) and SMTP_FROM/SMTP_FROM_NAME.";
+    if (process.env.NODE_ENV === "test") {
+      console.warn(message);
+      return { success: false, error: new Error(message) };
+    }
+    throw new Error(message);
   }
 
   try {
     // Convertir le composant React en HTML
     const html = await render(react);
 
-    // Envoyer l'email
-    const info = await transporter.sendMail({
-      from: `${fromName} <${fromEmail}>`,
-      to,
-      subject,
-      html,
-    });
+    if (resend) {
+      const { data, error } = await resend.emails.send({
+        from: `${fromName} <${fromEmail}>`,
+        to,
+        subject,
+        html,
+      });
+      if (error) {
+        console.error("[EMAIL] Resend error:", error);
+        // Si SMTP est dispo, tenter en fallback
+        if (transporter) {
+          console.warn("[EMAIL] Falling back to SMTP after Resend failure");
+        } else {
+          return { success: false, error };
+        }
+      } else {
+        console.log(`[EMAIL] Sent via Resend to ${to}: ${data?.id}`);
+        return { success: true, data: { id: data?.id || "resend" } };
+      }
+    }
 
-    console.log(`[EMAIL] Sent to ${to}: ${info.messageId}`);
-    return { success: true, data: { id: info.messageId } };
+    if (transporter) {
+      const info = await transporter.sendMail({
+        from: `${fromName} <${fromEmail}>`,
+        to,
+        subject,
+        html,
+      });
+
+      console.log(`[EMAIL] Sent via SMTP to ${to}: ${info.messageId}`);
+      return { success: true, data: { id: info.messageId } };
+    }
+
+    return { success: false, error: new Error("No email transport available") };
   } catch (error) {
     console.error("[EMAIL] Error sending email:", error);
     return { success: false, error };

@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+
+# LLM/AI Documentation
+# llms.txt - Brief overview for AI assistants
+# llms-full.txt - Complete API documentation
+# for-ai - Human-readable AI guide
