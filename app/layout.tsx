@@ -75,6 +75,11 @@ export const metadata: Metadata = {
   alternates: {
     canonical: siteUrl,
   },
+  other: {
+    "llms-txt": `${siteUrl}/llms.txt`,
+    "llms-full-txt": `${siteUrl}/llms-full.txt`,
+    "ai-documentation": `${siteUrl}/for-ai`,
+  },
 };
 
 export const viewport: Viewport = {
