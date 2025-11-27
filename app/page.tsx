@@ -182,7 +182,10 @@ export default async function HomePage() {
                         {event.mode === "ONLINE" ? "En ligne" : "Présentiel"}
                       </Badge>
                       {event.capacity && (
-                        <Badge variant="secondary" className="backdrop-blur-sm bg-background/80 shadow-sm">
+                        <Badge
+                          variant="secondary"
+                          className="backdrop-blur-sm bg-secondary/80 text-secondary-foreground shadow-sm border-border"
+                        >
                           {event._count.registrations}/{event.capacity}
                         </Badge>
                       )}
@@ -222,8 +225,8 @@ export default async function HomePage() {
                     </div>
                   </CardContent>
 
-                  <CardFooter className="pt-0">
-                    <div className="w-full flex items-center justify-between py-3 px-4 -mx-4 -mb-4 bg-muted/30 border-t group-hover:bg-primary/5 transition-colors">
+                  <CardFooter className="pt-0 px-0">
+                    <div className="w-full flex items-center justify-between py-3 px-6 bg-muted/30 border-t group-hover:bg-primary/5 transition-colors">
                       <span className="text-sm font-medium">Voir les détails</span>
                       <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
                     </div>
