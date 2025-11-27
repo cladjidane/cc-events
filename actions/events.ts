@@ -28,10 +28,12 @@ export async function createEvent(
     const latitudeStr = formData.get("latitude");
     const longitudeStr = formData.get("longitude");
 
-    // Calculer endAt automatiquement (startAt + 2h)
     const startAtValue = formData.get("startAt");
     const startAtDate = startAtValue ? new Date(startAtValue as string) : new Date();
-    const endAtDate = new Date(startAtDate.getTime() + 2 * 60 * 60 * 1000);
+    const endAtValue = formData.get("endAt");
+    const endAtDate = endAtValue
+      ? new Date(endAtValue as string)
+      : new Date(startAtDate.getTime() + 2 * 60 * 60 * 1000); // fallback 2h si aucune fin fournie
 
     const coverImageValue = formData.get("coverImage");
 
@@ -113,10 +115,12 @@ export async function updateEvent(
     const latitudeStr = formData.get("latitude");
     const longitudeStr = formData.get("longitude");
 
-    // Calculer endAt automatiquement (startAt + 2h)
     const startAtValue = formData.get("startAt");
     const startAtDate = startAtValue ? new Date(startAtValue as string) : new Date();
-    const endAtDate = new Date(startAtDate.getTime() + 2 * 60 * 60 * 1000);
+    const endAtValue = formData.get("endAt");
+    const endAtDate = endAtValue
+      ? new Date(endAtValue as string)
+      : new Date(startAtDate.getTime() + 2 * 60 * 60 * 1000); // fallback 2h si aucune fin fournie
 
     const coverImageValue = formData.get("coverImage");
 

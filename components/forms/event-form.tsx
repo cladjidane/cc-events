@@ -163,16 +163,30 @@ export function EventForm({ event }: Props) {
           </div>
         )}
 
-        <div className="space-y-2">
-          <Label htmlFor="startAt">Date et heure *</Label>
-          <Input
-            id="startAt"
-            name="startAt"
-            type="datetime-local"
-            required
-            defaultValue={event ? formatDateForInput(event.startAt) : ""}
-            disabled={isPending}
-          />
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="startAt">Date et heure de début *</Label>
+            <Input
+              id="startAt"
+              name="startAt"
+              type="datetime-local"
+              required
+              defaultValue={event ? formatDateForInput(event.startAt) : ""}
+              disabled={isPending}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="endAt">Date et heure de fin *</Label>
+            <Input
+              id="endAt"
+              name="endAt"
+              type="datetime-local"
+              required
+              defaultValue={event ? formatDateForInput(event.endAt) : ""}
+              disabled={isPending}
+            />
+          </div>
         </div>
 
         <input type="hidden" name="timezone" value="Europe/Paris" />
