@@ -249,9 +249,16 @@ export default async function HomePage() {
                 v{process.env.npm_package_version || "0.1.0"}-{(process.env.VERCEL_GIT_COMMIT_SHA || "dev").slice(0, 7)}
               </span>
             </div>
-            <p className="text-sm text-muted-foreground">
-              &copy; {new Date().getFullYear()} EventLite — Gestion d'événements simplifiée
-            </p>
+            <div className="flex flex-col md:items-end gap-2 text-sm text-muted-foreground">
+              <p>&copy; {new Date().getFullYear()} EventLite — Gestion d'événements simplifiée</p>
+              <Link
+                href="/for-ai"
+                className="inline-flex items-center gap-2 text-primary font-medium hover:underline"
+              >
+                <span>Documentation IA et API</span>
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+            </div>
           </div>
         </div>
       </footer>
